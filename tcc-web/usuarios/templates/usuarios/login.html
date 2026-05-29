@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            color: #111;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #fff;
+        }
+
+        .login-card {
+            width: min(86vw, 270px);
+        }
+
+        h1 {
+            margin: 0 0 18px;
+            text-align: center;
+            font-size: 28px;
+            line-height: 1.1;
+        }
+
+        .alerta {
+            margin-bottom: 10px;
+            padding: 7px 8px;
+            border: 1px solid #a9efbc;
+            border-radius: 2px;
+            color: #1b7d38;
+            background: #ecfff1;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .erro {
+            margin: 0 0 10px;
+            padding: 7px 8px;
+            border: 1px solid #ffd0c0;
+            border-radius: 2px;
+            color: #aa3514;
+            background: #fff3ef;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .campo {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #111;
+            font-size: 8px;
+            font-weight: 800;
+        }
+
+        input {
+            width: 100%;
+            height: 32px;
+            padding: 0 9px;
+            border: 0;
+            border-radius: 2px;
+            outline: none;
+            color: #111;
+            font-size: 8px;
+            background: #e8f0ff;
+        }
+
+        input:focus {
+            box-shadow: 0 0 0 2px rgba(21, 59, 115, 0.2);
+        }
+
+        .entrar {
+            width: 100%;
+            height: 34px;
+            margin-top: 5px;
+            border: 0;
+            border-radius: 3px;
+            color: #fff;
+            background: #153b73;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .entrar:hover {
+            background: #0f2d58;
+        }
+
+        .rodape {
+            margin: 18px 0 0;
+            text-align: center;
+            color: #5d6675;
+            font-size: 8px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <main class="login-card">
+        <h1>Login</h1>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alerta">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if form.errors %}
+            <p class="erro">Usuário ou senha inválidos.</p>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="campo">
+                <label for="id_username">E-mail</label>
+                {{ form.username }}
+            </div>
+
+            <div class="campo">
+                <label for="id_password">Senha</label>
+                {{ form.password }}
+            </div>
+
+            <button class="entrar" type="submit">Entrar</button>
+        </form>
+
+        <p class="rodape">Área restrita aos administradores do sistema.</p>
+    </main>
+</body>
+</html>
