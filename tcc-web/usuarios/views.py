@@ -8,6 +8,15 @@ from .forms import CadastroUsuarioForm, EdicaoUsuarioForm, LoginForm
 from .forms import LoginForm, CadastroUsuarioForm
 from .models import Usuario
 
+from django.contrib.auth import authenticate
+
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 class UsuarioLoginView(LoginView):
     authentication_form = LoginForm
@@ -142,3 +151,83 @@ def alterar_status_usuario(request, usuario_id):
             )
 
     return redirect("listar_usuarios")
+
+
+class LoginApiView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        email = request.data.get("email")
+        senha = request.data.get("senha")
+
+        if not email or not senha:
+            return Response(
+                {
+                    "erro": "E-mail e senha são obrigatórios."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = authenticate(
+            request=request,
+            username=email,
+            password=senha,
+        )
+
+        if user is None:
+            return Response(
+                {
+                    "erro": "E-mail ou senha inválidos."
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not user.is_active:
+            return Response(
+                {
+                    "erro": "Usuário inativo."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not hasattr(user, "perfil"):
+            return Response(
+                {
+                    "erro": "Este usuário não possui acesso ao aplicativo."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        perfil = user.perfil
+
+        tipos_permitidos = [
+            Usuario.Tipo.ASSOCIADO,
+            Usuario.Tipo.FISCAL,
+            Usuario.Tipo.MOTORISTA,
+        ]
+
+        if perfil.tipo not in tipos_permitidos:
+            return Response(
+                {
+                    "erro": "Este usuário não possui acesso ao aplicativo."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "usuario": {
+                    "id": user.id,
+                    "nome": user.first_name,
+                    "email": user.email,
+                    "tipo": perfil.tipo,
+                    "rua": perfil.rua,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
