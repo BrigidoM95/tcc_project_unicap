@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Editar Usuário</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 30px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fa;
+            color: #111;
+        }
+
+        .card {
+            width: min(100%, 420px);
+            padding: 30px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        h1 {
+            margin: 0 0 25px;
+            text-align: center;
+        }
+
+        .campo {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            height: 40px;
+            padding: 0 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #153b73;
+            box-shadow: 0 0 0 2px rgba(21, 59, 115, 0.15);
+        }
+
+        .erro {
+            margin-top: 5px;
+            color: #b42318;
+            font-size: 12px;
+        }
+
+        .acoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button,
+        .voltar {
+            flex: 1;
+            padding: 11px;
+            border: 0;
+            border-radius: 4px;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button {
+            background: #153b73;
+            color: white;
+        }
+
+        button:hover {
+            background: #0f2d58;
+        }
+
+        .voltar {
+            background: #e5e7eb;
+            color: #111;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="card">
+
+        <h1>Editar Usuário</h1>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="campo">
+                <label for="{{ form.nome.id_for_label }}">
+                    Nome
+                </label>
+
+                {{ form.nome }}
+
+                {% for error in form.nome.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="campo">
+                <label for="{{ form.email.id_for_label }}">
+                    E-mail
+                </label>
+
+                {{ form.email }}
+
+                {% for error in form.email.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="campo">
+                <label for="{{ form.tipo.id_for_label }}">
+                    Tipo de usuário
+                </label>
+
+                {{ form.tipo }}
+
+                {% for error in form.tipo.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% for error in form.non_field_errors %}
+                <div class="erro">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+            <div class="acoes">
+
+                <a
+                    href="{% url 'listar_usuarios' %}"
+                    class="voltar"
+                >
+                    Cancelar
+                </a>
+
+                <button type="submit">
+                    Salvar alterações
+                </button>
+
+            </div>
+
+        </form>
+
+    </main>
+
+</body>
+</html>

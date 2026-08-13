@@ -99,6 +99,59 @@
             margin-right: 15px;
             color: #153b73;
         }
+
+        .botao-editar {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            background: #153b73;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .botao-editar:hover {
+            background: #0f2d58;
+        }
+
+        .acoes-usuario {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .acoes-usuario form {
+            margin: 0;
+        }
+
+        .botao-inativar,
+        .botao-reativar {
+            padding: 7px 12px;
+            border: 0;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .botao-inativar {
+            background: #b42318;
+        }
+
+        .botao-inativar:hover {
+            background: #8f1c13;
+        }
+
+        .botao-reativar {
+            background: #187a3d;
+        }
+
+        .botao-reativar:hover {
+            background: #105d2d;
+        }
+
     </style>
 </head>
 
@@ -137,6 +190,7 @@
                         <th>E-mail</th>
                         <th>Tipo</th>
                         <th>Situação</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
 
@@ -167,6 +221,33 @@
                                         Inativo
                                     </span>
                                 {% endif %}
+                            </td>
+
+                            <td class="acoes-usuario">
+
+                                <a href="{% url 'editar_usuario' usuario.id %}" class="botao-editar">
+                                    Editar
+                                </a>
+
+                                <form method="post" action="{% url 'alterar_status_usuario' usuario.id %}">
+                                     {% csrf_token %}
+
+                                    {% if usuario.user.is_active %}
+
+                                    <button type="submit" class="botao-inativar">
+                                        Inativar
+                                    </button>
+
+                                        {% else %}
+
+                                    <button type="submit" class="botao-reativar">
+                                        Reativar
+                                    </button>
+
+                                        {% endif %}
+
+                                </form>
+
                             </td>
                         </tr>
 

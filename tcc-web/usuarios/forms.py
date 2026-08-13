@@ -68,5 +68,61 @@ class CadastroUsuarioForm(forms.Form):
             user=user,
             tipo=tipo,
         )
-
         return user
+
+class EdicaoUsuarioForm(forms.Form):
+    nome = forms.CharField(
+        max_length=150,
+        label="Nome"
+    )
+
+    email = forms.EmailField(
+        label="E-mail"
+    )
+
+    tipo = forms.ChoiceField(
+        choices=[
+            (Usuario.Tipo.ASSOCIADO, "Associado"),
+            (Usuario.Tipo.FISCAL, "Fiscal"),
+            (Usuario.Tipo.MOTORISTA, "Motorista"),
+        ],
+        label="Tipo de usuário",
+    )
+
+    def __init__(self, *args, usuario, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.usuario = usuario
+
+        self.fields["nome"].initial = usuario.user.first_name
+        self.fields["email"].initial = usuario.user.email
+        self.fields["tipo"].initial = usuario.tipo
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+
+        existe = User.objects.filter(
+            username__iexact=email
+        ).exclude(
+            pk=self.usuario.user.pk
+        ).exists()
+
+        if existe:
+            raise forms.ValidationError(
+                "Já existe outro usuário cadastrado com este e-mail."
+            )
+
+        return email
+
+    def save(self):
+        user = self.usuario.user
+
+        user.first_name = self.cleaned_data["nome"]
+        user.email = self.cleaned_data["email"]
+        user.username = self.cleaned_data["email"]
+        user.save()
+
+        self.usuario.tipo = self.cleaned_data["tipo"]
+        self.usuario.save()
+
+        return self.usuario

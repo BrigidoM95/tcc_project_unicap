@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import LoginView
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import CadastroUsuarioForm, EdicaoUsuarioForm, LoginForm
 from .forms import LoginForm, CadastroUsuarioForm
 from .models import Usuario
 
@@ -67,3 +68,66 @@ def cadastrar_usuario(request):
         "usuarios/cadastrar.html",
         {"form": form},
     )
+
+@user_passes_test(eh_administrador, login_url="login")
+def editar_usuario(request, usuario_id):
+    usuario = get_object_or_404(
+        Usuario.objects.select_related("user"),
+        pk=usuario_id
+    )
+
+    if request.method == "POST":
+        form = EdicaoUsuarioForm(
+            request.POST,
+            usuario=usuario
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                "Usuário atualizado com sucesso."
+            )
+
+            return redirect("listar_usuarios")
+
+    else:
+        form = EdicaoUsuarioForm(
+            usuario=usuario
+        )
+
+    return render(
+        request,
+        "usuarios/editar.html",
+        {
+            "form": form,
+            "usuario": usuario,
+        },
+    )
+
+@user_passes_test(eh_administrador, login_url="login")
+def alterar_status_usuario(request, usuario_id):
+    usuario = get_object_or_404(
+        Usuario.objects.select_related("user"),
+        pk=usuario_id
+    )
+
+    if request.method == "POST":
+        user = usuario.user
+
+        user.is_active = not user.is_active
+        user.save()
+
+        if user.is_active:
+            messages.success(
+                request,
+                "Usuário reativado com sucesso."
+            )
+        else:
+            messages.success(
+                request,
+                "Usuário inativado com sucesso."
+            )
+
+    return redirect("listar_usuarios")
