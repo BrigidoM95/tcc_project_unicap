@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Usuários</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fa;
+            color: #111;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .cabecalho {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        .botao {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            background: #153b73;
+            color: white;
+            font-weight: bold;
+        }
+
+        .botao:hover {
+            background: #0f2d58;
+        }
+
+        .mensagem {
+            margin-bottom: 20px;
+            padding: 12px;
+            border-radius: 4px;
+            background: #ecfff1;
+            color: #1b7d38;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #153b73;
+            color: white;
+        }
+
+        .ativo {
+            color: green;
+            font-weight: bold;
+        }
+
+        .inativo {
+            color: #b42318;
+            font-weight: bold;
+        }
+
+        .vazio {
+            padding: 30px;
+            text-align: center;
+            background: white;
+        }
+
+        .navegacao {
+            margin-top: 20px;
+        }
+
+        .navegacao a {
+            margin-right: 15px;
+            color: #153b73;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="container">
+
+        <div class="cabecalho">
+            <h1>Controle de Usuários</h1>
+
+            <a
+                href="{% url 'cadastrar_usuario' %}"
+                class="botao"
+            >
+                Novo usuário
+            </a>
+        </div>
+
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mensagem">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+
+        {% if usuarios %}
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Tipo</th>
+                        <th>Situação</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for usuario in usuarios %}
+
+                        <tr>
+                            <td>
+                                {{ usuario.user.first_name }}
+                            </td>
+
+                            <td>
+                                {{ usuario.user.email }}
+                            </td>
+
+                            <td>
+                                {{ usuario.get_tipo_display }}
+                            </td>
+
+                            <td>
+                                {% if usuario.user.is_active %}
+                                    <span class="ativo">
+                                        Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="inativo">
+                                        Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        {% else %}
+
+            <div class="vazio">
+                Nenhum usuário cadastrado.
+            </div>
+
+        {% endif %}
+
+
+        <div class="navegacao">
+            <a href="/">Home</a>
+            <a href="{% url 'logout' %}">Sair</a>
+        </div>
+
+    </main>
+
+</body>
+</html>
