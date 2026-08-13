@@ -20,3 +20,22 @@ class Usuario(models.Model):
         max_length=20,
         choices=Tipo.choices,
     )
+
+    rua = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
+
+    def save(self, *args, **kwargs):
+        if self.tipo != self.Tipo.ASSOCIADO:
+            self.rua = None
+
+        super().save(*args, **kwargs)
+
+        if self.tipo == self.Tipo.ASSOCIADO and not self.rua:
+            self.rua = f"RUA{self.pk:06d}"
+            super().save(update_fields=["rua"])

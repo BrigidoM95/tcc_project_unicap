@@ -151,7 +151,6 @@
         .botao-reativar:hover {
             background: #105d2d;
         }
-
     </style>
 </head>
 
@@ -170,7 +169,6 @@
             </a>
         </div>
 
-
         {% if messages %}
             {% for message in messages %}
                 <div class="mensagem">
@@ -178,7 +176,6 @@
                 </div>
             {% endfor %}
         {% endif %}
-
 
         {% if usuarios %}
 
@@ -189,6 +186,7 @@
                         <th>Nome</th>
                         <th>E-mail</th>
                         <th>Tipo</th>
+                        <th>RUA</th>
                         <th>Situação</th>
                         <th>Ações</th>
                     </tr>
@@ -199,6 +197,7 @@
                     {% for usuario in usuarios %}
 
                         <tr>
+
                             <td>
                                 {{ usuario.user.first_name }}
                             </td>
@@ -209,6 +208,14 @@
 
                             <td>
                                 {{ usuario.get_tipo_display }}
+                            </td>
+
+                            <td>
+                                {% if usuario.rua %}
+                                    {{ usuario.rua }}
+                                {% else %}
+                                    -
+                                {% endif %}
                             </td>
 
                             <td>
@@ -225,30 +232,39 @@
 
                             <td class="acoes-usuario">
 
-                                <a href="{% url 'editar_usuario' usuario.id %}" class="botao-editar">
+                                <a
+                                    href="{% url 'editar_usuario' usuario.id %}"
+                                    class="botao-editar"
+                                >
                                     Editar
                                 </a>
 
-                                <form method="post" action="{% url 'alterar_status_usuario' usuario.id %}">
-                                     {% csrf_token %}
+                                <form
+                                    method="post"
+                                    action="{% url 'alterar_status_usuario' usuario.id %}"
+                                >
+                                    {% csrf_token %}
 
                                     {% if usuario.user.is_active %}
-
-                                    <button type="submit" class="botao-inativar">
-                                        Inativar
-                                    </button>
-
-                                        {% else %}
-
-                                    <button type="submit" class="botao-reativar">
-                                        Reativar
-                                    </button>
-
-                                        {% endif %}
+                                        <button
+                                            type="submit"
+                                            class="botao-inativar"
+                                        >
+                                            Inativar
+                                        </button>
+                                    {% else %}
+                                        <button
+                                            type="submit"
+                                            class="botao-reativar"
+                                        >
+                                            Reativar
+                                        </button>
+                                    {% endif %}
 
                                 </form>
 
                             </td>
+
                         </tr>
 
                     {% endfor %}
@@ -264,7 +280,6 @@
             </div>
 
         {% endif %}
-
 
         <div class="navegacao">
             <a href="/">Home</a>
