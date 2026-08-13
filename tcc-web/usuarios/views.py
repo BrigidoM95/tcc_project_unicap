@@ -11,9 +11,20 @@ from .models import Usuario
 
 class UsuarioLoginView(LoginView):
     authentication_form = LoginForm
-    template_name = 'usuarios/login.html'
+    template_name = "usuarios/login.html"
     redirect_authenticated_user = True
 
+    def form_valid(self, form):
+        user = form.get_user()
+
+        if not eh_administrador(user):
+            form.add_error(
+                None,
+                "Acesso permitido apenas para administradores."
+            )
+            return self.form_invalid(form)
+
+        return super().form_valid(form)
 
 def logout_view(request):
     logout(request)
@@ -24,7 +35,7 @@ def eh_administrador(user):
     if not user.is_authenticated:
         return False
 
-    if user.is_superuser or user.is_staff:
+    if user.is_superuser:
         return True
 
     return (

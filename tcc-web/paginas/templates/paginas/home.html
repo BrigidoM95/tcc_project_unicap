@@ -3,12 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <title>Home Administrativa</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 6px;
+        }
+
+        .acoes {
+            margin-top: 25px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .botao {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .botao-usuarios {
+            background: #153b73;
+            color: white;
+        }
+
+        .botao-usuarios:hover {
+            background: #0f2d58;
+        }
+
+        .botao-sair {
+            background: #e5e7eb;
+            color: #111;
+        }
+    </style>
 </head>
+
 <body>
-    <h1>Home Administrativa</h1>
 
-    <p>Usuário autenticado com sucesso.</p>
+    <main class="container">
 
-    <a href="{% url 'logout' %}">Sair</a>
+        <h1>Home Administrativa</h1>
+
+        <p>Usuário autenticado com sucesso.</p>
+
+        <div class="acoes">
+
+            <a
+                href="{% url 'listar_usuarios' %}"
+                class="botao botao-usuarios"
+            >
+                Gerenciar Usuários
+            </a>
+
+            <a
+                href="{% url 'logout' %}"
+                class="botao botao-sair"
+            >
+                Sair
+            </a>
+
+        </div>
+
+    </main>
+
 </body>
 </html>
