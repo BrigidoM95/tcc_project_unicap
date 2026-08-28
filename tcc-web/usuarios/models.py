@@ -3,6 +3,16 @@ from django.conf import settings
 
 
 class Usuario(models.Model):
+    def __str__(self):
+        nome = self.user.get_full_name().strip()
+
+        if nome:
+            return nome
+
+        if self.user.email:
+            return self.user.email
+
+        return self.user.username
 
     class Tipo(models.TextChoices):
         ADMINISTRADOR = "administrador", "Administrador"

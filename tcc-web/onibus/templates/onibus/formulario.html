@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{{ titulo }}</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fa;
+            color: #111827;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .subtitulo {
+            color: #6b7280;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 30px;
+        }
+
+        .codigo {
+            padding: 12px;
+            background: #f3f4f6;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .grupo {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        .campo-formulario {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .ajuda {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .erro {
+            color: #b91c1c;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .erros-gerais {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .foto-atual img {
+            width: 280px;
+            max-width: 100%;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .acoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .botao {
+            border: none;
+            padding: 11px 18px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .principal {
+            background: #153b73;
+            color: white;
+        }
+
+        .secundario {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<main class="container">
+
+    <h1>{{ titulo }}</h1>
+
+    <p class="subtitulo">
+        Preencha as informações do veículo.
+    </p>
+
+
+    <section class="card">
+
+
+        {% if modo_edicao %}
+
+            <div class="codigo">
+
+                <strong>Código:</strong>
+
+                {{ onibus.codigo }}
+
+            </div>
+
+        {% endif %}
+
+
+        {% if form.non_field_errors %}
+
+            <div class="erros-gerais">
+
+                {% for erro in form.non_field_errors %}
+
+                    {{ erro }}
+
+                {% endfor %}
+
+            </div>
+
+        {% endif %}
+
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+        >
+
+            {% csrf_token %}
+
+
+            <div class="grupo">
+
+                <label>
+                    {{ form.nome.label }}
+                </label>
+
+                {{ form.nome }}
+
+                {% for erro in form.nome.errors %}
+                    <div class="erro">{{ erro }}</div>
+                {% endfor %}
+
+            </div>
+
+
+            <div class="grupo">
+
+                <label>
+                    {{ form.placa.label }}
+                </label>
+
+                {{ form.placa }}
+
+                <div class="ajuda">
+                    Exemplos: ABC1234 ou ABC1D23.
+                </div>
+
+                {% for erro in form.placa.errors %}
+                    <div class="erro">{{ erro }}</div>
+                {% endfor %}
+
+            </div>
+
+
+            <div class="grupo">
+
+                <label>
+                    {{ form.capacidade.label }}
+                </label>
+
+                {{ form.capacidade }}
+
+                <div class="ajuda">
+                    Permitido entre 1 e 46 passageiros.
+                </div>
+
+                {% for erro in form.capacidade.errors %}
+                    <div class="erro">{{ erro }}</div>
+                {% endfor %}
+
+            </div>
+
+
+            <div class="grupo">
+
+                <label>
+                    {{ form.motorista.label }}
+                </label>
+
+                {{ form.motorista }}
+
+                <div class="ajuda">
+                    Somente motoristas ativos podem ser vinculados.
+                </div>
+
+                {% for erro in form.motorista.errors %}
+                    <div class="erro">{{ erro }}</div>
+                {% endfor %}
+
+            </div>
+
+
+            <div class="grupo">
+
+                <label>
+                    {{ form.foto.label }}
+                </label>
+
+
+                {% if modo_edicao and onibus.foto %}
+
+                    <div class="foto-atual">
+
+                        <p>Foto atual:</p>
+
+                        <img
+                            src="{{ onibus.foto.url }}"
+                            alt="Foto atual do ônibus"
+                        >
+
+                    </div>
+
+                {% endif %}
+
+
+                {{ form.foto }}
+
+                <div class="ajuda">
+                    JPG, JPEG, PNG ou WEBP. Máximo de 5 MB.
+                </div>
+
+                {% for erro in form.foto.errors %}
+                    <div class="erro">{{ erro }}</div>
+                {% endfor %}
+
+            </div>
+
+
+            <div class="grupo">
+
+                <label>
+                    {{ form.observacoes.label }}
+                </label>
+
+                {{ form.observacoes }}
+
+                <div class="ajuda">
+                    Máximo de 500 caracteres.
+                </div>
+
+                {% for erro in form.observacoes.errors %}
+                    <div class="erro">{{ erro }}</div>
+                {% endfor %}
+
+            </div>
+
+
+            <div class="acoes">
+
+                <button
+                    type="submit"
+                    class="botao principal"
+                >
+                    {{ texto_botao }}
+                </button>
+
+                <a
+                    href="{% url 'listar_onibus' %}"
+                    class="botao secundario"
+                >
+                    Cancelar
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</main>
+
+</body>
+
+</html>

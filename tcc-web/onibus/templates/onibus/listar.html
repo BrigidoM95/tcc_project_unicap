@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Gerenciamento de Ônibus</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fa;
+            color: #111827;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .cabecalho {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        .subtitulo {
+            color: #6b7280;
+            margin-top: 7px;
+        }
+
+        .acoes-cabecalho {
+            display: flex;
+            gap: 10px;
+        }
+
+        .botao {
+            display: inline-block;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .principal {
+            background: #153b73;
+            color: white;
+        }
+
+        .secundario {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .editar {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .inativar {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .reativar {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .mensagem {
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            background: #dcfce7;
+            color: #166534;
+            border-radius: 5px;
+        }
+
+        .resumos {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .resumo {
+            background: white;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+
+        .resumo strong {
+            display: block;
+            margin-top: 5px;
+            font-size: 28px;
+        }
+
+        .filtros-container {
+            background: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filtros {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filtro {
+            background: #f3f4f6;
+            color: #374151;
+            text-decoration: none;
+            padding: 9px 13px;
+            border-radius: 4px;
+        }
+
+        .filtro.ativo {
+            background: #153b73;
+            color: white;
+        }
+
+        .busca {
+            display: flex;
+            gap: 8px;
+        }
+
+        .busca input {
+            width: 300px;
+            padding: 9px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
+        .tabela-container {
+            background: white;
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th {
+            background: #153b73;
+            color: white;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+
+        .foto {
+            width: 85px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .ativo-status {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .inativo-status {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        .acoes {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .acoes form {
+            margin: 0;
+        }
+
+        .vazio {
+            text-align: center;
+            padding: 35px;
+            color: #6b7280;
+        }
+
+        @media (max-width: 800px) {
+            body {
+                padding: 20px;
+            }
+
+            .cabecalho {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .resumos {
+                grid-template-columns: 1fr;
+            }
+
+            .busca {
+                width: 100%;
+            }
+
+            .busca input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<main class="container">
+
+    <header class="cabecalho">
+
+        <div>
+            <h1>Gerenciamento de Ônibus</h1>
+
+            <p class="subtitulo">
+                Cadastro, edição e controle dos veículos.
+            </p>
+        </div>
+
+        <div class="acoes-cabecalho">
+
+            <a href="{% url 'home' %}" class="botao secundario">
+                Voltar
+            </a>
+
+            <a href="{% url 'cadastrar_onibus' %}" class="botao principal">
+                Cadastrar ônibus
+            </a>
+
+        </div>
+
+    </header>
+
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div class="mensagem">
+                {{ message }}
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    <section class="resumos">
+
+        <div class="resumo">
+            Total de ônibus
+            <strong>{{ total }}</strong>
+        </div>
+
+        <div class="resumo">
+            Ativos
+            <strong>{{ total_ativos }}</strong>
+        </div>
+
+        <div class="resumo">
+            Inativos
+            <strong>{{ total_inativos }}</strong>
+        </div>
+
+    </section>
+
+
+    <section class="filtros-container">
+
+        <div class="filtros">
+
+            <a
+                href="?status=ativos&q={{ busca }}"
+                class="filtro {% if filtro_status == 'ativos' %}ativo{% endif %}"
+            >
+                Ativos
+            </a>
+
+            <a
+                href="?status=inativos&q={{ busca }}"
+                class="filtro {% if filtro_status == 'inativos' %}ativo{% endif %}"
+            >
+                Inativos
+            </a>
+
+            <a
+                href="?status=todos&q={{ busca }}"
+                class="filtro {% if filtro_status == 'todos' %}ativo{% endif %}"
+            >
+                Todos
+            </a>
+
+        </div>
+
+
+        <form method="get" class="busca">
+
+            <input
+                type="hidden"
+                name="status"
+                value="{{ filtro_status }}"
+            >
+
+            <input
+                type="text"
+                name="q"
+                value="{{ busca }}"
+                placeholder="Código, placa, nome ou motorista"
+            >
+
+            <button type="submit" class="botao principal">
+                Buscar
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <section class="tabela-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Foto</th>
+                    <th>Código</th>
+                    <th>Identificação</th>
+                    <th>Placa</th>
+                    <th>Capacidade</th>
+                    <th>Motorista</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for item in onibus %}
+
+                    <tr>
+
+                        <td>
+
+                            {% if item.foto %}
+
+                                <img
+                                    src="{{ item.foto.url }}"
+                                    class="foto"
+                                    alt="Foto do ônibus {{ item.codigo }}"
+                                >
+
+                            {% else %}
+
+                                Sem foto
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+                            <strong>{{ item.codigo }}</strong>
+                        </td>
+
+                        <td>
+                            {{ item.nome }}
+                        </td>
+
+                        <td>
+                            {{ item.placa }}
+                        </td>
+
+                        <td>
+                            {{ item.capacidade }} lugares
+                        </td>
+
+                        <td>
+
+                            {{ item.motorista.user.first_name }}
+
+                            {% if item.motorista.user.last_name %}
+                                {{ item.motorista.user.last_name }}
+                            {% endif %}
+
+                            <br>
+
+                            <small>
+                                {{ item.motorista.user.email }}
+                            </small>
+
+                        </td>
+
+                        <td>
+
+                            {% if item.status == "ativo" %}
+
+                                <span class="ativo-status">
+                                    Ativo
+                                </span>
+
+                            {% else %}
+
+                                <span class="inativo-status">
+                                    Inativo
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <div class="acoes">
+
+                                <a
+                                    href="{% url 'editar_onibus' item.id %}"
+                                    class="botao editar"
+                                >
+                                    Editar
+                                </a>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'alterar_status_onibus' item.id %}"
+                                >
+
+                                    {% csrf_token %}
+
+
+                                    {% if item.status == "ativo" %}
+
+                                        <button
+                                            type="submit"
+                                            class="botao inativar"
+                                            onclick="return confirm('Deseja realmente inativar este ônibus?');"
+                                        >
+                                            Inativar
+                                        </button>
+
+                                    {% else %}
+
+                                        <button
+                                            type="submit"
+                                            class="botao reativar"
+                                            onclick="return confirm('Deseja realmente reativar este ônibus?');"
+                                        >
+                                            Reativar
+                                        </button>
+
+                                    {% endif %}
+
+                                </form>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+
+                {% empty %}
+
+                    <tr>
+
+                        <td colspan="8" class="vazio">
+                            Nenhum ônibus cadastrado.
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </section>
+
+</main>
+
+</body>
+
+</html>
