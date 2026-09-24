@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block titulo %}Rotas{% endblock %} | UNIBUS</title>
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #243247;
+            background: #f3f5f9;
+        }
+        .layout { min-height: 100vh; display: flex; }
+        aside {
+            width: 220px;
+            padding: 28px 20px;
+            background: #142c4d;
+            color: white;
+        }
+        aside h2 { margin-top: 0; }
+        aside a {
+            display: block;
+            margin: 12px 0;
+            padding: 12px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+        aside a:hover, aside .selecionado { background: #25476f; }
+        main { flex: 1; min-width: 0; padding: 32px; }
+        h1 { margin-top: 0; }
+        .cabecalho, .acoes, .filtros {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .cabecalho { justify-content: space-between; margin-bottom: 24px; }
+        .cabecalho h1 { margin-bottom: 0; }
+        .cartao {
+            padding: 24px;
+            background: white;
+            border: 1px solid #e1e6ee;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .resumo {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .resumo strong {
+            display: block;
+            font-size: 28px;
+            margin-top: 8px;
+        }
+        .botao {
+            display: inline-block;
+            border: 0;
+            border-radius: 7px;
+            padding: 11px 16px;
+            background: #ae4700;
+            color: white;
+            text-decoration: none;
+            font: inherit;
+            cursor: pointer;
+        }
+        .secundario { background: #344963; }
+        .perigo { background: #b42318; }
+        .sucesso { background: #187044; }
+        .campo-formulario, .filtros input, .filtros select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #9ba9ba;
+            border-radius: 7px;
+            font: inherit;
+            background: white;
+        }
+        .filtros input { flex: 1; min-width: 180px; }
+        .filtros select { width: auto; }
+        .campo { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 7px; }
+        .ajuda { display: block; color: #526176; margin-top: 7px; }
+        .errorlist { color: #b42318; padding-left: 20px; }
+        .mensagem {
+            padding: 14px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            background: #e7effb;
+        }
+        .mensagem.error { background: #fee9e7; color: #8d2118; }
+        .mensagem.success { background: #e3f3e9; color: #155d38; }
+        .tabela { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            padding: 14px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e1e6ee;
+            vertical-align: top;
+        }
+        th { color: #526176; }
+        td small { display: block; margin-top: 5px; color: #526176; }
+        .acoes form { margin: 0; }
+        .status { font-weight: bold; }
+        .ativa { color: #187044; }
+        .inativa { color: #b42318; }
+        :focus-visible { outline: 3px solid #4385d5; outline-offset: 3px; }
+        @media (max-width: 760px) {
+            .layout { display: block; }
+            aside { width: 100%; padding: 16px; }
+            aside a { display: inline-block; margin: 0; }
+            aside h2 { margin-bottom: 10px; }
+            main { padding: 18px; }
+            .resumo { grid-template-columns: 1fr; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside>
+        <h2>UNIBUS</h2>
+        <nav aria-label="Navegação principal">
+            <a href="{% url 'home' %}">Voltar para Home</a>
+            <a href="{% url 'listar_onibus' %}">Ônibus</a>
+            <a class="selecionado" href="{% url 'listar_rotas' %}">Rotas</a>
+        </nav>
+    </aside>
+
+    <main>
+        {% for message in messages %}
+            <div class="mensagem {{ message.tags }}" role="status">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% block conteudo %}{% endblock %}
+    </main>
+</div>
+</body>
+</html>

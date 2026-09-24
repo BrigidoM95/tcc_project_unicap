@@ -7,26 +7,11 @@ from paginas.views import home
 
 
 urlpatterns = [
-    path(
-        "admin/",
-        admin.site.urls,
-    ),
-
-    path(
-        "",
-        include("usuarios.urls"),
-    ),
-
-    path(
-        "",
-        include("onibus.urls"),
-    ),
-
-    path(
-        "",
-        home,
-        name="home",
-    ),
+    path("admin/", admin.site.urls),
+    path("", include("usuarios.urls")),
+    path("", include("onibus.urls")),
+    path("", include("rotas.urls")),
+    path("", home, name="home"),
 ]
 
 

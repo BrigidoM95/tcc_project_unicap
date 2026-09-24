@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     UsuarioLoginView,
@@ -28,5 +29,10 @@ urlpatterns = [
         "usuarios/<int:usuario_id>/status/",
         alterar_status_usuario,
         name="alterar_status_usuario",
+    ),
+    path(
+        "api/token/refresh/",
+        TokenRefreshView.as_view(),
+        name="api_token_refresh",
     ),
 ]

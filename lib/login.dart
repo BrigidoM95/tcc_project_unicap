@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import './home.dart';
 import './services/api_service.dart';
+import './painel_motorista.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -26,62 +27,64 @@ class _LoginState extends State<Login> {
   }
 
   Future<void> realizarLogin() async {
+    if (carregando) return;
+
     if (emailController.text.trim().isEmpty || senhaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Informe o e-mail e a senha.')),
       );
-
       return;
     }
 
-    setState(() {
-      carregando = true;
-    });
+    setState(() => carregando = true);
 
-    final response = await ApiService.login(
-      emailController.text.trim(),
-      senhaController.text,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      carregando = false;
-    });
-
-    if (response == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('E-mail ou senha inválidos.')),
+    try {
+      final response = await ApiService.login(
+        emailController.text.trim(),
+        senhaController.text,
       );
 
-      return;
-    }
+      if (response == null) {
+        throw Exception(
+          'Não foi possível entrar. Confira as credenciais '
+          'e a conexão com o servidor.',
+        );
+      }
 
-    final access = response['access'];
+      final access = response['access'];
+      final usuario = response['usuario'];
 
-    final usuario = response['usuario'];
+      if (access is! String || access.isEmpty || usuario is! Map) {
+        throw Exception('Resposta inválida recebida do servidor.');
+      }
 
-    if (access == null || usuario == null || usuario is! Map) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Resposta inválida recebida do servidor.'),
-        ),
+      final dadosUsuario = Map<String, dynamic>.from(usuario);
+
+      // Consulta o perfil no servidor, sem depender
+      // do formato do campo "tipo" no retorno do login.
+      final painel = await ApiService.painelMotorista(access);
+
+      if (!mounted) return;
+
+      final Widget destino = painel['motorista'] == true
+          ? PainelMotorista(usuario: dadosUsuario, accessToken: access)
+          : Home(usuario: dadosUsuario, accessToken: access);
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => destino),
       );
+    } catch (e) {
+      if (!mounted) return;
 
-      return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) {
+        setState(() => carregando = false);
+      }
     }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Home(
-          usuario: Map<String, dynamic>.from(usuario),
-          accessToken: access.toString(),
-        ),
-      ),
-    );
   }
 
   @override
