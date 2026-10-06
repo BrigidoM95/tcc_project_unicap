@@ -1,14 +1,9 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Home Administrativa</title>
-</head>
-<body>
-    <h1>Home Administrativa</h1>
-
-    <p>Usuário autenticado com sucesso.</p>
-
-    <a href="{% url 'logout' %}">Sair</a>
-</body>
-</html>
+{% extends "paginas/base.html" %}
+{% block titulo %}Visão geral{% endblock %}
+{% block conteudo %}<header class="cabecalho"><div><h1>Visão geral</h1><p class="subtitulo">Gerencie a operação do transporte universitário.</p></div></header>
+<section class="modulos" aria-label="Módulos do sistema">
+<article class="modulo"><span class="numero">01 / CADASTROS</span><h2>Usuários</h2><p>Gerencie associados, fiscais, motoristas e administradores.</p><a class="botao" href="{% url 'listar_usuarios' %}">Gerenciar usuários</a></article>
+<article class="modulo"><span class="numero">02 / FROTA</span><h2>Ônibus</h2><p>Consulte veículos, capacidade e motoristas vinculados.</p><a class="botao" href="{% url 'listar_onibus' %}">Gerenciar ônibus</a></article>
+<article class="modulo"><span class="numero">03 / PERCURSOS</span><h2>Rotas</h2><p>Organize os trajetos, horários e pontos de embarque.</p><a class="botao" href="{% url 'listar_rotas' %}">Gerenciar rotas</a></article>
+<article class="modulo"><span class="numero">04 / PRESENÇAS</span><h2>Embarques</h2><p>Acompanhe os registros de presença dos associados por viagem.</p><a class="botao" href="{% url 'presencas_embarque' %}">Consultar embarques</a></article>
+</section>{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "rotas/base.html" %}
+{% block titulo %}Presenças{% endblock %}
+{% block conteudo %}
+<h1>Gerenciamento de embarque</h1>
+<div class="cartao"><form method="get" class="filtros">
+<select name="viagem"><option value="">Todas as viagens</option>
+{% for v in viagens %}<option value="{{ v.pk }}" {% if selecionada == v.pk|stringformat:"s" %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+<button class="botao">Filtrar</button></form><p>{{ total }} embarque(s) confirmado(s). Exibição limitada aos 500 mais recentes.</p></div>
+<div class="cartao" style="overflow-x:auto"><table><thead><tr><th>Associado / RUA</th><th>Viagem</th><th>Ônibus / Placa</th><th>Fiscal</th><th>Data e hora</th></tr></thead><tbody>
+{% for c in registros %}<tr><td>{{ c.nome_associado }} / {{ c.rua_associado }}</td><td>{{ c.viagem }}</td><td>{{ c.codigo_onibus }} / {{ c.placa_onibus }}</td><td>{{ c.fiscal }}</td><td>{{ c.registrado_em|date:"d/m/Y H:i:s" }}</td></tr>
+{% empty %}<tr><td colspan="5">Nenhum embarque registrado.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

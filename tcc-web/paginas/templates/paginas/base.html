@@ -1,0 +1,17 @@
+{% load static %}
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Painel{% endblock %} | UNIBUS</title>
+<link rel="stylesheet" href="{% static 'paginas/admin.css' %}"></head>
+<body><a class="pular" href="#conteudo">Ir para o conteúdo</a><div class="app-layout">
+<aside class="menu"><a class="marca" href="{% url 'home' %}">UNIBUS<span>Transporte universitário</span></a>
+<nav aria-label="Navegação principal">
+<a href="{% url 'home' %}" {% if request.path == '/' %}aria-current="page"{% endif %}>Visão geral</a>
+<a href="{% url 'listar_usuarios' %}" {% if '/usuarios/' in request.path %}aria-current="page"{% endif %}>Usuários</a>
+<a href="{% url 'listar_onibus' %}" {% if '/onibus/' in request.path %}aria-current="page"{% endif %}>Ônibus</a>
+<a href="{% url 'listar_rotas' %}" {% if '/rotas/' in request.path %}aria-current="page"{% endif %}>Rotas</a>
+<a href="{% url 'presencas_embarque' %}" {% if '/embarques/' in request.path %}aria-current="page"{% endif %}>Embarques</a>
+</nav><a class="sair" href="{% url 'logout' %}">Sair do sistema</a></aside>
+<div class="workspace"><header class="topbar"><span>Painel administrativo</span><span>{{ request.user.first_name|default:request.user.username }}</span></header>
+<main id="conteudo" class="conteudo">
+{% for message in messages %}<div class="mensagem {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+{% block conteudo %}{% endblock %}</main></div></div></body></html>

@@ -1,0 +1,58 @@
+{% extends "rotas/base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block conteudo %}
+<div class="cabecalho">
+    <h1>{{ titulo }}</h1>
+    <a class="botao secundario" href="{% url 'listar_rotas' %}">
+        Voltar para rotas
+    </a>
+</div>
+
+<div class="cartao">
+    {% if rota %}
+        <p>Status atual: <strong>{{ rota.get_status_display }}</strong></p>
+    {% endif %}
+
+    <p>
+        Informe o percurso de ida. Os horários de ida e retorno
+        representam as saídas previstas em cada sentido.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <div class="mensagem error" role="alert">
+                Confira os campos destacados antes de salvar.
+            </div>
+        {% endif %}
+
+        {{ form.non_field_errors }}
+
+        {% for campo in form %}
+            <div class="campo">
+                <label for="{{ campo.id_for_label }}">
+                    {{ campo.label }}{% if campo.field.required %} *{% endif %}
+                </label>
+
+                {{ campo }}
+
+                {% if campo.help_text %}
+                    <small class="ajuda">{{ campo.help_text }}</small>
+                {% endif %}
+
+                {{ campo.errors }}
+            </div>
+        {% endfor %}
+
+        <div class="acoes">
+            <button class="botao" type="submit">{{ texto_botao }}</button>
+            <a class="botao secundario" href="{% url 'listar_rotas' %}">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

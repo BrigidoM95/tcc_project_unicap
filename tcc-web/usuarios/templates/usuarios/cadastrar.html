@@ -1,0 +1,117 @@
+{% extends "paginas/base.html" %}
+{% block titulo %}Usuários{% endblock %}
+{% block conteudo %}
+
+
+    <div class="card formulario">
+
+        <h1>Novo Usuário</h1>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            <div class="campo">
+                <label for="{{ form.nome.id_for_label }}">
+                    Nome
+                </label>
+
+                {{ form.nome }}
+
+                {% for error in form.nome.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+
+            <div class="campo">
+                <label for="{{ form.email.id_for_label }}">
+                    E-mail
+                </label>
+
+                {{ form.email }}
+
+                {% for error in form.email.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+
+            <div class="campo">
+                <label for="{{ form.tipo.id_for_label }}">
+                    Tipo de usuário
+                </label>
+
+                {{ form.tipo }}
+
+                {% for error in form.tipo.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+
+            <div class="campo">
+                <label for="{{ form.senha1.id_for_label }}">
+                    Senha
+                </label>
+
+                {{ form.senha1 }}
+
+                {% for error in form.senha1.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+
+            <div class="campo">
+                <label for="{{ form.senha2.id_for_label }}">
+                    Confirmar senha
+                </label>
+
+                {{ form.senha2 }}
+
+                {% for error in form.senha2.errors %}
+                    <div class="erro">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+
+            {% for error in form.non_field_errors %}
+                <div class="erro">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+
+            <div class="acoes">
+
+                <a
+                    href="{% url 'listar_usuarios' %}"
+                    class="voltar"
+                >
+                    Cancelar
+                </a>
+
+                <button type="submit">
+                    Cadastrar
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+{% endblock %}
