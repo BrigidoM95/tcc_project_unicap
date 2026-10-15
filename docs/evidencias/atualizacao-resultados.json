@@ -1,0 +1,21 @@
+{
+  "contagens_antes": {
+    "auth_user": 3,
+    "usuarios_usuario": 1,
+    "onibus_onibus": 1,
+    "rotas_rota": 1,
+    "rotas_viagem": 6,
+    "embarques_checkin": 0
+  },
+  "contagens_depois": {
+    "auth_user": 3,
+    "usuarios_usuario": 1,
+    "onibus_onibus": 1,
+    "rotas_rota": 1,
+    "rotas_viagem": 6,
+    "embarques_checkin": 0
+  },
+  "backup_sqlite_integridade": "ok",
+  "migracao_preservou_registros": true,
+  "migracao_repetida": "ok"
+}

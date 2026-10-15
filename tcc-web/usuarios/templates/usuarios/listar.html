@@ -1,0 +1,130 @@
+{% extends "paginas/base.html" %}
+{% block titulo %}Usuários{% endblock %}
+{% block conteudo %}
+
+
+    <div class="container">
+
+        <div class="cabecalho">
+            <h1>Controle de Usuários</h1>
+
+            <a
+                href="{% url 'cadastrar_usuario' %}"
+                class="botao"
+            >
+                Novo usuário
+            </a>
+        </div>
+
+        
+
+        {% if usuarios %}
+
+            <div class="table-scroll"><table>
+
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Tipo</th>
+                        <th>RUA</th>
+                        <th>Situação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for usuario in usuarios %}
+
+                        <tr>
+
+                            <td>
+                                {{ usuario.user.first_name }}
+                            </td>
+
+                            <td>
+                                {{ usuario.user.email }}
+                            </td>
+
+                            <td>
+                                {{ usuario.get_tipo_display }}
+                            </td>
+
+                            <td>
+                                {% if usuario.rua %}
+                                    {{ usuario.rua }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if usuario.user.is_active %}
+                                    <span class="ativo">
+                                        Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="inativo">
+                                        Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="acoes-usuario">
+
+                                <a
+                                    href="{% url 'editar_usuario' usuario.id %}"
+                                    class="botao-editar"
+                                >
+                                    Editar
+                                </a>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'alterar_status_usuario' usuario.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    {% if usuario.user.is_active %}
+                                        <button
+                                            type="submit"
+                                            class="botao-inativar"
+                                        >
+                                            Inativar
+                                        </button>
+                                    {% else %}
+                                        <button
+                                            type="submit"
+                                            class="botao-reativar"
+                                        >
+                                            Reativar
+                                        </button>
+                                    {% endif %}
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table></div>
+
+        {% else %}
+
+            <div class="vazio">
+                Nenhum usuário cadastrado.
+            </div>
+
+        {% endif %}
+
+        
+
+    </div>
+
+
+{% endblock %}

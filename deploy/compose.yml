@@ -1,0 +1,78 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+    volumes:
+      - banco:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Defina DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${UNICAP_DOMAIN},127.0.0.1,localhost
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${UNICAP_DOMAIN}
+      DJANGO_CORS_ORIGINS: https://${UNICAP_DOMAIN}
+      DJANGO_BEHIND_PROXY: "true"
+      DB_ENGINE: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      POSTGRES_SSLMODE: disable
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media:/app/tcc-web/media
+    expose:
+      - "8000"
+    restart: unless-stopped
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      UNICAP_DOMAIN: ${UNICAP_DOMAIN:?Defina o domínio}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../build/web:/srv/flutter:ro
+      - media:/srv/media:ro
+      - certificados:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+  backup:
+    image: postgres:17-alpine
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ./backups:/backups
+      - media:/media:ro
+    entrypoint: ["sh", "/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  banco:
+  media:
+  certificados:
+  caddy_config:

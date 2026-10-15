@@ -1,0 +1,25 @@
+{$UNICAP_DOMAIN} {
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+    redir /app /app/
+    handle_path /app/* {
+        root * /srv/flutter
+        try_files {path} /index.html
+        file_server
+    }
+    handle_path /media/* {
+        root * /srv/media
+        @imagem path *.jpg *.jpeg *.png *.webp
+        handle @imagem {
+            file_server
+        }
+        respond 404
+    }
+    handle {
+        reverse_proxy web:8000
+    }
+}

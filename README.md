@@ -1,16 +1,11 @@
-# aulas_flutter
+# UNICAP — transporte universitário
 
-A new Flutter project.
+Comece por [LEIA-ME-PRIMEIRO.md](LEIA-ME-PRIMEIRO.md).
 
-## Getting Started
+- `tcc-web/`: Django, API REST, relatórios e administração.
+- `lib/`: aplicativo Flutter para associados, fiscais e motoristas.
+- `scripts/`: configuração e instalação local.
+- `deploy/`: implantação com PostgreSQL, Gunicorn, Caddy/HTTPS e backups.
+- `docs/`: validação, implantação e alinhamento do TCC.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Esta entrega é um pacote consolidado; não requer o ZIP parcial do Módulo 5.

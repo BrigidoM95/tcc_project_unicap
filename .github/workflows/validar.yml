@@ -1,0 +1,43 @@
+name: Validar sistema
+on: [push, pull_request]
+jobs:
+  servidor:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: unicap_test
+          POSTGRES_PASSWORD: unicap_test_local
+          POSTGRES_DB: unicap_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U unicap_test" --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DB_ENGINE: postgres
+      POSTGRES_USER: unicap_test
+      POSTGRES_PASSWORD: unicap_test_local
+      POSTGRES_DB: unicap_test
+      POSTGRES_HOST: localhost
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r tcc-web/requirements.txt
+      - run: python manage.py makemigrations --check --dry-run
+        working-directory: tcc-web
+      - run: python manage.py test --settings=config.test_settings --noinput
+        working-directory: tcc-web
+  aplicativo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.1'
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build web --base-href /app/

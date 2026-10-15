@@ -1,0 +1,8 @@
+{% extends 'paginas/base.html' %}{% load static %}{% block titulo %}Acompanhar viagens{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'rotas/vendor/leaflet/leaflet.css' %}"><style>#mapa{height:clamp(350px,64vh,740px);border-radius:12px;z-index:0}.mapa-controles{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.mapa-controles>div{flex:1;min-width:200px}.mapa-status{margin:18px 0 12px;padding:14px;background:#eaf0f7;border-radius:8px}.leaflet-container{font:14px Arial,sans-serif}.leaflet-control-attribution a{color:#1c3b6e}</style>{% endblock %}
+{% block conteudo %}<header class="cabecalho"><div><h1>Acompanhar viagens</h1><p class="subtitulo">Posição do ônibus, ocupação e pontos cadastrados.</p></div></header>
+<div class="cartao"><div class="mapa-controles"><div><label for="selecao">Viagem em andamento ou rota</label><select id="selecao"><option>Carregando...</option></select></div><button id="atualizar" type="button">Atualizar</button><button id="centralizar" type="button" class="secundario">Enquadrar mapa</button></div>
+<p id="status-mapa" class="mapa-status" role="status" aria-live="polite">Buscando viagens...</p><div id="mapa" aria-label="Mapa das viagens e pontos de embarque"></div>
+<p class="ajuda">Atualização a cada 10 segundos. Laranja: posição e percurso GPS recente. Azul: pontos cadastrados. As linhas entre pontos são referências, não navegação pelas ruas. Localizações com mais de 60 segundos recebem aviso.</p>
+<div id="pontos-mapa"></div></div>
+<script src="{% static 'rotas/vendor/leaflet/leaflet.js' %}"></script><script src="{% static 'rotas/mapa.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,11 @@
+.filtros-relatorio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.filtro-largo{grid-column:1/-1}.opcao-checkbox{display:flex;gap:10px;align-items:center;margin:0}
+.indicadores-relatorio{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.indicadores-relatorio strong{display:block;font-size:32px;color:var(--navy);margin:8px 0}
+.indicadores-relatorio small{color:var(--muted)}.indicadores-relatorio .cartao{padding:20px}
+.grafico-dias{max-height:360px;overflow:auto;padding-right:12px}.linha-grafico{display:grid;grid-template-columns:100px minmax(30px,1fr) 50px;align-items:center;gap:16px;margin:10px 0;font-size:14px}
+.linha-grafico strong{text-align:right}.trilho{height:14px;background:#eaf0f7;border-radius:4px;overflow:hidden}.trilho span{display:block;height:100%;background:var(--orange);border-radius:4px}
+.paginacao-relatorio{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:14px}
+.table-scroll td{overflow-wrap:anywhere;max-width:300px}.filtros-relatorio .errorlist{margin:6px 0;padding-left:18px;font-size:14px}
+@media(max-width:1100px){.indicadores-relatorio{grid-template-columns:repeat(2,minmax(0,1fr))}.filtros-relatorio{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.filtros-relatorio,.indicadores-relatorio{grid-template-columns:1fr}.linha-grafico{grid-template-columns:85px minmax(20px,1fr) 35px;gap:8px;font-size:13px}.cartao{padding:16px}}

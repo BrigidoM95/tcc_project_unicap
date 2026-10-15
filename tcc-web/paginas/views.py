@@ -1,7 +1,5 @@
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-
-
-@login_required
+from relatorios.views import administrador_ativo
+@administrador_ativo
 def home(request):
     return render(request, 'paginas/home.html')

@@ -1,0 +1,7 @@
+{% extends "paginas/base.html" %}
+{% block titulo %}Editar usuário{% endblock %}
+{% block conteudo %}<div class="cartao formulario"><h1>Editar usuário</h1>
+<p class="ajuda">Cadastre as instituições e cursos em Gestão. A matrícula do ano atual é criada no primeiro cadastro do associado.</p>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}
+{% for campo in form %}<div class="campo">{{ campo.label_tag }}{{ campo }}{{ campo.errors }}{% if campo.help_text %}<small class="ajuda">{{ campo.help_text }}</small>{% endif %}</div>{% endfor %}
+<div class="acoes"><button type="submit">Salvar</button><a class="botao secundario" href="{% url 'listar_usuarios' %}">Voltar</a></div></form></div>{% endblock %}
