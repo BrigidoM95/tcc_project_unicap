@@ -1,0 +1,17 @@
+**/.env
+**/.local-secret
+**/*.sqlite3
+**/*.sqlite3-*
+**/__pycache__
+**/.venv*
+**/venv
+**/media
+**/staticfiles
+build
+.dart_tool
+.git
+deploy/backups
+
+backups
+dados-migracao.json
+tmp

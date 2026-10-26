@@ -1,0 +1,6 @@
+{% extends 'paginas/base.html' %}{% block titulo %}Gestão{% endblock %}{% block conteudo %}
+<header class="cabecalho"><div><h1>Gestão da associação</h1><p class="subtitulo">Cadastros de apoio e controle administrativo.</p></div></header>
+<div class="modulos"><article class="modulo"><h2>Instituições e cursos</h2><p>Cadastre instituições e cursos para vincular os estudantes.</p><div class="acoes"><a class="botao" href="{% url 'gestao:lista' 'instituicoes' %}">Instituições</a><a class="botao secundario" href="{% url 'gestao:lista' 'cursos' %}">Cursos</a></div></article>
+<article class="modulo"><h2>Despesas</h2><p>Registre gastos e exporte o relatório em PDF.</p><a class="botao" href="{% url 'gestao:lista' 'despesas' %}">Ver despesas</a></article>
+<article class="modulo"><h2>Pontos de embarque</h2><p>Gerencie os pontos disponíveis para vincular às rotas.</p><a class="botao" href="{% url 'gestao:lista' 'pontos' %}">Ver pontos de embarque</a></article>
+<article class="modulo"><h2>Auditoria</h2><p>Consulte acessos e operações com data e responsável.</p><a class="botao" href="{% url 'gestao:auditoria' %}">Ver registros</a></article></div>{% endblock %}

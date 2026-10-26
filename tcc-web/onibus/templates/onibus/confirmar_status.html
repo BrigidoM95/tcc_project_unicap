@@ -1,0 +1,23 @@
+{% extends 'paginas/base.html' %}
+{% block titulo %}{% if onibus.ativo %}Inativar{% else %}Reativar{% endif %} ônibus{% endblock %}
+{% block conteudo %}
+<section class="cartao formulario">
+    <h1>{% if onibus.ativo %}Inativar{% else %}Reativar{% endif %} ônibus</h1>
+    <p><strong>{{ onibus }}</strong></p>
+    {% if onibus.ativo %}
+        <p>Ao confirmar, este ônibus e as seguintes rotas serão inativados juntos:</p>
+        <ul>{% for rota in rotas %}<li>{{ rota.nome }}</li>{% empty %}<li>Nenhuma rota ativa vinculada.</li>{% endfor %}</ul>
+        <p>As rotas permanecerão inativas caso o ônibus seja reativado. Viagens em andamento precisam ser encerradas antes desta alteração.</p>
+    {% else %}
+        <p>O ônibus será reativado. As rotas vinculadas mantêm sua situação atual.</p>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}<input type="hidden" name="confirmar" value="1">
+        <input type="hidden" name="status" value="{% if onibus.ativo %}inativo{% else %}ativo{% endif %}">
+        <div class="acoes">
+            <button type="submit"{% if onibus.ativo %} class="perigo"{% endif %}>Confirmar {% if onibus.ativo %}inativação{% else %}reativação{% endif %}</button>
+            <a class="botao secundario" href="{% url 'listar_onibus' %}">Cancelar</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

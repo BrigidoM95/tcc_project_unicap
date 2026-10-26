@@ -1,0 +1,124 @@
+{% extends "rotas/base.html" %}
+
+{% block titulo %}Gerenciar rotas{% endblock %}
+
+{% block conteudo %}
+<div class="cabecalho">
+    <h1>Gerenciar rotas</h1>
+    <a class="botao" href="{% url 'cadastrar_rota' %}">Cadastrar rota</a>
+</div>
+
+<div class="resumo">
+    <div class="cartao">Total de rotas <strong>{{ total }}</strong></div>
+    <div class="cartao">Ativas <strong>{{ total_ativas }}</strong></div>
+    <div class="cartao">Inativas <strong>{{ total_inativas }}</strong></div>
+</div>
+
+<div class="cartao">
+    {% include 'paginas/filtro_status.html' %}
+    <form method="get" class="filtros">
+        <input
+            type="search"
+            name="q"
+            value="{{ busca }}"
+            placeholder="Buscar rota, cidade, ônibus ou motorista"
+            aria-label="Buscar rotas"
+        >
+
+        <input type="hidden" name="status" value="{{ filtro_status }}">
+        {% if request.GET.pendencia %}<input type="hidden" name="pendencia" value="{{ request.GET.pendencia }}">{% endif %}
+
+        <button class="botao" type="submit">Filtrar</button>
+        <a class="botao secundario" href="{% url 'listar_rotas' %}">
+            Limpar
+        </a>
+    </form>
+</div>
+
+<div class="cartao tabela">
+    <table>
+        <thead>
+            <tr>
+                <th>Rota</th>
+                <th>Percurso de ida</th>
+                <th>Ônibus / motorista</th>
+                <th>Horários previstos</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rota in rotas %}
+                <tr>
+                    <td>
+                        <strong><a href="{% url 'detalhe_rota' rota.pk %}">{{ rota.nome }}</a></strong>
+                        {% if rota.observacoes %}
+                            <small>{{ rota.observacoes }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ rota.destino }}</td>
+                    <td>
+                        {{ rota.onibus.codigo }} — {{ rota.onibus.placa }}
+                        <small>{{ rota.motorista }}</small>
+                        {% if not rota.onibus.ativo %}
+                            <small>Ônibus inativo</small>
+                        {% endif %}
+                        {% if not rota.onibus.motorista.user.is_active %}
+                            <small>Motorista inativo</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        Ida: {{ rota.horario_ida|time:"H:i" }}
+                        <small>
+                            Retorno: {{ rota.horario_retorno|time:"H:i" }}
+                        </small>
+                    </td>
+                    <td>
+                        <span class="status {{ rota.status }}">
+                            {{ rota.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="acoes">
+                            <a class="botao secundario"
+                               href="{% url 'editar_rota' rota.pk %}">
+                                Editar
+                            </a>
+                            <a class="botao secundario"
+                            href="{% url 'listar_pontos' rota.pk %}">
+                                Pontos
+                            </a>
+
+                            <form method="post" onsubmit="return confirm('Confirmar alteração da situação da rota?')"
+                                  action="{% url 'alterar_status_rota' rota.pk %}">
+                                {% csrf_token %}
+
+                                {% if rota.ativa %}
+                                    <input type="hidden" name="status"
+                                           value="inativa">
+                                    <button type="submit" class="botao perigo">
+                                        Inativar
+                                    </button>
+                                {% else %}
+                                    <input type="hidden" name="status"
+                                           value="ativa">
+                                    <button type="submit" class="botao sucesso">
+                                        Reativar
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6">
+                        Nenhuma rota encontrada com esses filtros.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include 'gestao/paginacao.html' %}
+{% endblock %}

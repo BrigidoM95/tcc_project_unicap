@@ -1,0 +1,1 @@
+{% extends 'paginas/base.html' %}{% block conteudo %}<section class="cartao formulario"><h1>{{ titulo }}</h1><p>{{ mensagem }}</p><form method="post">{% csrf_token %}<button type="submit">Confirmar</button> <a class="botao secundario" href="{{ voltar }}">Cancelar</a></form></section>{% endblock %}

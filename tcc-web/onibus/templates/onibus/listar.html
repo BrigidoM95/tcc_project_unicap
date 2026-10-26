@@ -1,0 +1,221 @@
+{% extends "paginas/base.html" %}
+{% block titulo %}Ônibus{% endblock %}
+{% block conteudo %}
+
+
+<div class="container">
+
+    <header class="cabecalho">
+
+        <div>
+            <h1>Gerenciamento de Ônibus</h1>
+
+            <p class="subtitulo">
+                Cadastro, edição e controle dos veículos.
+            </p>
+        </div>
+
+        <div class="acoes-cabecalho">
+
+            
+
+            <a href="{% url 'cadastrar_onibus' %}" class="botao principal">
+                Cadastrar ônibus
+            </a>
+
+        </div>
+
+    </header>
+
+
+    
+
+
+    <section class="resumos">
+
+        <div class="resumo">
+            Total de ônibus
+            <strong>{{ total }}</strong>
+        </div>
+
+        <div class="resumo">
+            Ativos
+            <strong>{{ total_ativos }}</strong>
+        </div>
+
+        <div class="resumo">
+            Inativos
+            <strong>{{ total_inativos }}</strong>
+        </div>
+
+    </section>
+
+
+    <section class="filtros-container">
+
+        {% include 'paginas/filtro_status.html' %}
+
+
+        <form method="get" class="busca">
+
+            <input
+                type="hidden"
+                name="status"
+                value="{{ filtro_status }}"
+            >
+
+            <input
+                type="text"
+                name="q"
+                value="{{ busca }}"
+                placeholder="Código, placa, nome ou motorista"
+            >
+
+            <button type="submit" class="botao principal">
+                Buscar
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <section class="tabela-container">
+
+        <div class="table-scroll"><table>
+
+            <thead>
+
+                <tr>
+                    <th>Foto</th>
+                    <th>Código</th>
+                    <th>Identificação</th>
+                    <th>Placa</th>
+                    <th>Capacidade</th>
+                    <th>Motorista</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for item in onibus %}
+
+                    <tr>
+
+                        <td>
+
+                            {% if item.foto_url %}
+
+                                <img
+                                    src="{{ item.miniatura_url }}"
+                                    class="foto"
+                                    alt="Foto do ônibus {{ item.codigo }}"
+                                >
+
+                            {% else %}
+
+                                Sem foto
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+                            <strong><a href="{% url 'detalhe_onibus' item.pk %}">{{ item.codigo }}</a></strong>
+                        </td>
+
+                        <td>
+                            {{ item.nome }}
+                        </td>
+
+                        <td>
+                            {{ item.placa }}
+                        </td>
+
+                        <td>
+                            {{ item.capacidade }} lugares
+                        </td>
+
+                        <td>
+
+                            {{ item.motorista.user.first_name }}
+
+                            {% if item.motorista.user.last_name %}
+                                {{ item.motorista.user.last_name }}
+                            {% endif %}
+
+                            <br>
+
+                            <small>
+                                {{ item.motorista.user.email }}
+                            </small>
+
+                        </td>
+
+                        <td>
+
+                            {% if item.status == "ativo" %}
+
+                                <span class="ativo-status">
+                                    Ativo
+                                </span>
+
+                            {% else %}
+
+                                <span class="inativo-status">
+                                    Inativo
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <div class="acoes">
+
+                                <a
+                                    href="{% url 'editar_onibus' item.id %}"
+                                    class="botao editar"
+                                >
+                                    Editar
+                                </a>
+
+
+                                <a href="{% url 'alterar_status_onibus' item.id %}" class="botao {% if item.ativo %}inativar{% else %}reativar{% endif %}">
+                                    {% if item.ativo %}Inativar{% else %}Reativar{% endif %}
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+
+                {% empty %}
+
+                    <tr>
+
+                        <td colspan="8" class="vazio">
+                            Nenhum ônibus cadastrado.
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table></div>
+
+    </section>
+
+</div>
+
+
+{% include 'gestao/paginacao.html' %}
+{% endblock %}

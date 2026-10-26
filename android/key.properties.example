@@ -1,0 +1,4 @@
+storePassword=PREENCHA_LOCALMENTE
+keyPassword=PREENCHA_LOCALMENTE
+keyAlias=upload
+storeFile=/caminho/privado/unicap-upload.jks

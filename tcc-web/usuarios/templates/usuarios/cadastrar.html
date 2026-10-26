@@ -1,0 +1,7 @@
+{% extends "paginas/base.html" %}
+{% block titulo %}Cadastrar usuário{% endblock %}
+{% block conteudo %}<div class="cartao formulario"><h1>Cadastrar usuário</h1>
+<p class="ajuda">Escolha a instituição e depois o curso do associado.</p>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}
+{% include "usuarios/_campos_usuario.html" %}
+<div class="acoes"><button type="submit">Salvar</button><a class="botao secundario" href="{% url 'listar_usuarios' %}">Voltar</a></div></form></div>{% endblock %}

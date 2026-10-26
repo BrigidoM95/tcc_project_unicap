@@ -1,0 +1,24 @@
+{% load static %}
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Painel{% endblock %} | UNICAP</title>
+<link rel="stylesheet" href="{% static 'paginas/admin.css' %}">{% block extra_head %}{% endblock %}</head>
+<body><a class="pular" href="#conteudo">Ir para o conteúdo</a><div class="app-layout">
+<aside class="menu"><a class="marca" href="{% url 'home' %}">UNICAP<span>Transporte universitário</span></a>
+<nav aria-label="Navegação principal">
+<a href="{% url 'home' %}" {% if request.path == '/' %}aria-current="page"{% endif %}>Visão geral</a>
+<a href="{% url 'listar_usuarios' %}" {% if '/usuarios/' in request.path %}aria-current="page"{% endif %}>Usuários</a>
+<a href="{% url 'listar_onibus' %}" {% if '/onibus/' in request.path %}aria-current="page"{% endif %}>Ônibus</a>
+<a href="{% url 'listar_rotas' %}" {% if '/rotas/' in request.path %}aria-current="page"{% endif %}>Rotas</a>
+<a href="{% url 'presencas_embarque' %}" {% if '/embarques/' in request.path %}aria-current="page"{% endif %}>Embarques</a>
+<a href="{% url 'relatorios:painel' %}" {% if '/relatorios/' in request.path %}aria-current="page"{% endif %}>Relatórios</a>
+<a href="{% url 'viagens_admin' %}" {% if '/operacao/' in request.path %}aria-current="page"{% endif %}>Operação das viagens</a>
+<a href="{% url 'mapa' %}" {% if '/mapa/' in request.path %}aria-current="page"{% endif %}>Acompanhar viagens</a>
+<div class="grupo-menu">
+<a href="{% url 'gestao:painel' %}" {% if '/gestao/' in request.path and '/gestao/pontos/' not in request.path %}aria-current="page"{% endif %}>Gestão</a>
+<div class="submenu"><a href="{% url 'gestao:lista' 'pontos' %}" {% if '/gestao/pontos/' in request.path %}aria-current="page"{% endif %}>Pontos de embarque</a></div>
+</div>
+</nav><form method="post" action="{% url 'logout' %}" class="sair">{% csrf_token %}<button class="secundario">Sair do sistema</button></form></aside>
+<div class="workspace"><header class="topbar"><span>Painel administrativo</span><span>{{ request.user.first_name|default:request.user.username }}</span></header>
+<main id="conteudo" class="conteudo">
+{% for message in messages %}<div class="mensagem {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+{% block conteudo %}{% endblock %}</main></div></div></body></html>

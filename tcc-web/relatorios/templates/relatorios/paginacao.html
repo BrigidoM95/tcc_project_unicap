@@ -1,0 +1,9 @@
+{% if pagina.paginator.count %}
+<nav class="paginacao-relatorio" aria-label="Paginação de {{ ancora }}">
+  <span>{{ pagina.paginator.count }} resultado(s) · Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  <div class="acoes">
+  {% if pagina.has_previous %}<a class="botao secundario" href="?{{ parametros }}&amp;{{ chave }}={{ pagina.previous_page_number }}#{{ ancora }}">Anterior</a>{% endif %}
+  {% if pagina.has_next %}<a class="botao secundario" href="?{{ parametros }}&amp;{{ chave }}={{ pagina.next_page_number }}#{{ ancora }}">Próxima</a>{% endif %}
+  </div>
+</nav>
+{% endif %}

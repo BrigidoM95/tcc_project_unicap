@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Aulas Flutter</string>
+	<string>UNICAP</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>aulas_flutter</string>
+	<string>UNICAP</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -41,6 +41,16 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>A localização permite acompanhar o ônibus durante a viagem iniciada pelo motorista.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Durante uma viagem iniciada, a UNICAP acompanha o ônibus mesmo quando o motorista alterna de aplicativo. O rastreamento termina ao encerrar a viagem.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Acompanhar o ônibus somente durante a viagem iniciada pelo motorista.</string>
+	<key>UIBackgroundModes</key>
+	<array><string>location</string></array>
+	<key>NSCameraUsageDescription</key>
+	<string>A câmera é utilizada para ler o QR Code de embarque apresentado pelo fiscal.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

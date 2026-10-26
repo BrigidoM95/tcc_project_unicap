@@ -1,0 +1,132 @@
+{% extends "paginas/base.html" %}
+{% block titulo %}Usuários{% endblock %}
+{% block conteudo %}
+
+
+    <div class="container">
+
+        <div class="cabecalho">
+            <h1>Controle de Usuários</h1>
+
+            <a
+                href="{% url 'cadastrar_usuario' %}"
+                class="botao"
+            >
+                Novo usuário
+            </a>
+        </div>
+
+        
+
+        <form method="get" class="filtros cartao"><label>Busca<input name="q" value="{{ busca }}" placeholder="Nome, e-mail ou RUA"></label><label>Tipo<select name="tipo"><option value="">Todos</option>{% for valor,nome in tipos %}<option value="{{ valor }}" {% if tipo == valor %}selected{% endif %}>{{ nome }}</option>{% endfor %}</select></label><input type="hidden" name="status" value="{% if inativos %}inativos{% else %}ativos{% endif %}"><button>Filtrar</button><a href="?status={% if inativos %}ativos{% else %}inativos{% endif %}">{% if inativos %}Usuários ativos{% else %}Usuários inativos{% endif %}</a></form>
+        {% if usuarios %}
+
+            <div class="table-scroll"><table>
+
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Tipo</th>
+                        <th>RUA</th>
+                        <th>Situação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for usuario in usuarios %}
+
+                        <tr>
+
+                            <td>
+                                <a href="{% url 'detalhe_usuario' usuario.pk %}">{{ usuario.user.first_name }}</a>
+                            </td>
+
+                            <td>
+                                {{ usuario.user.email }}
+                            </td>
+
+                            <td>
+                                {{ usuario.get_tipo_display }}
+                            </td>
+
+                            <td>
+                                {% if usuario.rua %}
+                                    {{ usuario.rua }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if usuario.user.is_active %}
+                                    <span class="ativo">
+                                        Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="inativo">
+                                        Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="acoes-usuario">
+                                <a class="botao secundario" href="{% url 'redefinir_senha' usuario.pk %}">Redefinir senha</a>
+
+                                <a
+                                    href="{% url 'editar_usuario' usuario.id %}"
+                                    class="botao-editar"
+                                >
+                                    Editar
+                                </a>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'alterar_status_usuario' usuario.id %}" onsubmit="return confirm('Confirmar alteração da situação deste usuário? O histórico será preservado.')"
+                                >
+                                    {% csrf_token %}
+
+                                    {% if usuario.user.is_active %}
+                                        <button
+                                            type="submit"
+                                            class="botao-inativar"
+                                        >
+                                            Inativar
+                                        </button>
+                                    {% else %}
+                                        <button
+                                            type="submit"
+                                            class="botao-reativar"
+                                        >
+                                            Reativar
+                                        </button>
+                                    {% endif %}
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table></div>
+
+        {% else %}
+
+            <div class="vazio">
+                Nenhum usuário cadastrado.
+            </div>
+
+        {% endif %}
+
+        
+
+    </div>
+
+
+<nav>{% if pagina.has_previous %}<a href="?{{ parametros }}&pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %} {{ pagina.number }} / {{ pagina.paginator.num_pages }} {% if pagina.has_next %}<a href="?{{ parametros }}&pagina={{ pagina.next_page_number }}">Próxima</a>{% endif %}</nav>{% endblock %}

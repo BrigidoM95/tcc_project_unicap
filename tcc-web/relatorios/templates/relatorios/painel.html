@@ -1,0 +1,80 @@
+{% extends "paginas/base.html" %}
+{% load static %}
+{% block titulo %}Relatórios{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'relatorios/relatorios.css' %}?v=5">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div><h1>Relatórios</h1><p class="subtitulo">Frequência dos associados e utilização do transporte.</p></div>
+  <div class="acoes acoes-relatorio">
+    <a class="botao secundario" href="{% url 'gestao:lista' 'despesas' %}">Despesas</a>
+    {% if relatorio %}<a class="botao" href="{% url 'relatorios:pdf' %}?{{ parametros }}">Baixar PDF</a>{% endif %}
+  </div>
+</header>
+<section class="cartao"><h2>Associados ativos por instituição</h2>{% for a in associados_instituicao %}<p>{{ a.curso__instituicao__nome }} <meter min="0" max="{{ total_instituicoes|default:1 }}" value="{{ a.total }}">{{ a.total }}</meter> {{ a.total }}</p>{% empty %}<p>Nenhum associado com instituição cadastrada.</p>{% endfor %}</section>
+<section class="cartao" aria-label="Filtros do relatório">
+  <form method="get" class="filtros-relatorio">
+    {% if form.non_field_errors %}<div class="erro filtro-largo" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    {% for campo in form %}
+      {% if campo.is_hidden %}{% if campo.errors %}<div class="erro filtro-largo" role="alert">{{ campo.label }}: {{ campo.errors }}</div>{% endif %}
+      {% elif campo.name == 'sem_ponto' %}
+        <div class="filtro-largo"><label class="opcao-checkbox">{{ campo }} {{ campo.label }}</label>{{ campo.errors }}</div>
+      {% else %}
+        <div><label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{{ campo }}{{ campo.errors }}{% if campo.help_text %}<small>{{ campo.help_text }}</small>{% endif %}</div>
+      {% endif %}
+    {% endfor %}
+    <div class="acoes filtro-largo"><button type="submit">Aplicar filtros</button><a class="botao secundario" href="{% url 'relatorios:painel' %}">Mês atual</a></div>
+  </form>
+  <p class="ajuda">Datas e horários em {{ fuso }} (Caarapó/MS). O período inclui o dia final. Consultas de até 366 dias.</p>
+  <p class="ajuda">O ônibus inclui automaticamente suas rotas. Os filtros valem para todos os resultados e para o PDF.</p>
+</section>
+{% if relatorio %}
+<section class="cartao filtros-aplicados" aria-label="Filtros aplicados">
+  <h2>Filtros aplicados</h2>
+  <ul>{% for filtro in relatorio.filtros_legiveis %}<li>{{ filtro }}</li>{% endfor %}</ul>
+</section>
+<section class="indicadores-relatorio" aria-label="Indicadores do período">
+  <article class="cartao"><span>Embarques</span><strong>{{ resumo.embarques }}</strong><small>Check-ins confirmados</small></article>
+  <article class="cartao"><span>Associados</span><strong>{{ resumo.associados }}</strong><small>Pessoas distintas</small></article>
+  <article class="cartao"><span>Viagens com embarque</span><strong>{{ resumo.viagens_com_embarque }}</strong><small>Ida e retorno separados</small></article>
+  <article class="cartao"><span>Ônibus utilizados</span><strong>{{ resumo.onibus_utilizados }}</strong><small>Veículos distintos</small></article>
+</section>
+{% if not resumo.embarques %}<p class="mensagem" role="status">Nenhum embarque encontrado para os filtros selecionados.</p>{% endif %}
+<section class="cartao" aria-labelledby="grafico-titulo">
+  <h2 id="grafico-titulo">Embarques por dia</h2>
+  <div class="grafico-dias" role="list" aria-label="Quantidade diária de embarques">
+    {% for item in por_dia %}<div class="linha-grafico" role="listitem">
+      <time datetime="{{ item.dia|date:'Y-m-d' }}">{{ item.dia|date:'d/m/Y' }}</time>
+      <div class="trilho" aria-hidden="true"><span style="width:{{ item.percentual }}%"></span></div>
+      <strong>{{ item.total }}</strong>
+    </div>{% endfor %}
+  </div>
+</section>
+<section class="cartao" id="frequencia">
+  <h2>Frequência por associado</h2>
+  <p class="ajuda">Pessoas identificadas pelo cadastro. Nome e RUA do último embarque no período. Dias com ida e retorno contam uma vez em “Dias de uso”.</p>
+  <div class="table-scroll"><table><thead><tr><th>Associado / RUA</th><th>Embarques</th><th>Dias de uso</th><th>Primeira presença</th><th>Última presença</th></tr></thead><tbody>
+  {% for item in frequencia %}<tr><td><a href="{% url 'detalhe_usuario' item.associado_id %}">{{ item.nome }}</a><small>{{ item.rua }} · {{ item.instituicao|default:"Instituição não informada" }}</small></td><td>{{ item.embarques }}</td><td>{{ item.dias }}</td><td>{{ item.primeira_presenca|date:'d/m/Y H:i' }}</td><td>{{ item.ultima_presenca|date:'d/m/Y H:i' }}</td></tr>
+  {% empty %}<tr><td colspan="5">Nenhuma presença registrada no período.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include 'relatorios/paginacao.html' with pagina=frequencia chave='pagina_frequencia' ancora='frequencia' %}
+</section>
+<section class="cartao" id="viagens">
+  <h2>Ocupação e vagas por viagem</h2>
+  <p class="ajuda">Inclui viagens iniciadas no período e viagens com embarques no período. A ocupação considera todos os passageiros da viagem, mesmo ao filtrar um associado ou ponto. Viagens antigas sem capacidade registrada exibem “Não registrada”.</p>
+  <div class="table-scroll"><table><thead><tr><th>Viagem / início</th><th>Rota / ônibus</th><th>Sentido / status</th><th>Presentes</th><th>Capacidade</th><th>Vagas não ocupadas</th><th>Ocupação</th></tr></thead><tbody>
+  {% for item in linhas_viagens %}<tr>
+    <td>#{{ item.id }}<small>{{ item.inicio|date:'d/m/Y H:i' }}</small></td><td>{{ item.rota }}<small>{{ item.onibus }} / {{ item.placa }}</small></td><td>{{ item.sentido }}<small>{{ item.status }}</small></td><td>{{ item.presentes }}</td>
+    {% if item.capacidade %}<td>{{ item.capacidade }}</td><td>{{ item.vagas }}</td><td>{{ item.ocupacao|floatformat:1 }}%</td>{% else %}<td>Não registrada</td><td>—</td><td>—</td>{% endif %}
+  </tr>{% empty %}<tr><td colspan="7">Nenhuma viagem encontrada.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include 'relatorios/paginacao.html' with pagina=viagens chave='pagina_viagens' ancora='viagens' %}
+</section>
+<section class="cartao" id="embarques"><h2>Registros de embarque</h2>
+  <p class="ajuda">A lista tem páginas de 25 registros. O PDF inclui todos os resultados dos filtros, até o limite informado na exportação.</p>
+  <div class="table-scroll"><table><thead><tr><th>Data e hora</th><th>Associado / RUA</th><th>Ônibus / placa</th><th>Viagem / rota</th><th>Sentido</th><th>Ponto informado</th></tr></thead><tbody>
+  {% for item in embarques %}<tr><td>{{ item.ocorrido_em|date:'d/m/Y H:i:s' }}</td><td>{{ item.nome_associado }}<small>{{ item.rua_associado }}</small></td><td>{{ item.codigo_onibus }}<small>{{ item.placa_onibus }}</small></td><td>#{{ item.viagem_id }}<small>{{ item.viagem.nome_rota_historico }}</small></td><td>{{ item.get_sentido_display }}</td><td>{{ item.ponto_informado }}</td></tr>{% empty %}<tr><td colspan="6">Nenhum embarque encontrado.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include 'relatorios/paginacao.html' with pagina=embarques chave='pagina_embarques' ancora='embarques' %}
+</section>
+{% endif %}
+{% endblock %}
