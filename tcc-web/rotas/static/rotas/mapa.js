@@ -28,19 +28,14 @@
     document.getElementById('pontos-mapa').replaceChildren();
     if (!rota) {aviso('Nenhuma rota ativa cadastrada.');return;}
     const pontos = rota.pontos.filter(p => !viagem || p.sentido === viagem.sentido);
-    for (const sentido of ['ida','retorno']) {
-      const caminho = pontos.filter(p=>p.sentido===sentido && p.latitude != null && p.longitude != null);
-      if(caminho.length>1) L.polyline(caminho.map(p=>[p.latitude,p.longitude]),{color:'#2b5e97',weight:2,dashArray:'6 7'}).addTo(layer);
-    }
     const ul = document.createElement('ul');
     for (const p of pontos) {
       const nome = `${p.ordem}. ${p.nome} (${p.sentido})`;
-      const li=document.createElement('li');li.textContent=nome+(p.latitude==null?' — sem coordenadas':'');ul.append(li);
-      if(p.latitude!=null && p.longitude!=null) L.circleMarker([p.latitude,p.longitude],{radius:6,color:'#1c3b6e',fillOpacity:.9}).bindPopup(texto(nome)).addTo(layer);
+      const li=document.createElement('li');li.textContent=nome;ul.append(li);
     }
     document.getElementById('pontos-mapa').append(ul);
     if (trajeto.length>1) L.polyline(trajeto.map(p=>[p.latitude,p.longitude]),{color:'#ad4700',weight:4}).addTo(layer);
-    let msg = `${rota.nome} · ${rota.origem} → ${rota.destino}`;
+    let msg = `${rota.nome} · ${rota.destino}`;
     if (viagem) {
       msg += ` · ${viagem.presentes}/${viagem.capacidade} embarques · ${viagem.vagas} vagas`;
       const loc=viagem.localizacao;
@@ -48,12 +43,16 @@
         const hora = new Date(loc.capturada_em).toLocaleTimeString('pt-BR');
         msg += ` · Último GPS: ${hora}` + (loc.desatualizada ? ' · LOCALIZAÇÃO DESATUALIZADA' : '');
         msg += loc.precisao_metros != null ? ` · Precisão estimada: ${loc.precisao_metros} m` : '';
+        if(loc.precisao_metros > 10) msg += ' · Posição aproximada';
         L.circleMarker([loc.latitude,loc.longitude],{radius:13,color:loc.desatualizada?'#657386':'#ad4700',fillOpacity:1,weight:3}).bindPopup(texto('Ônibus '+viagem.onibus_codigo+' · '+hora)).addTo(layer);
         if(loc.precisao_metros) L.circle([loc.latitude,loc.longitude],{radius:loc.precisao_metros,color:'#ad4700',weight:1,fillOpacity:.08}).addTo(layer);
       } else msg += ' · Aguardando GPS do motorista.';
     } else msg += ` · Ida ${rota.horario_ida} / retorno ${rota.horario_retorno}`;
     aviso(msg);
-    if(primeira) {enquadrar();primeira=false;}
+    if(primeira && layer.getLayers().length) {enquadrar();primeira=false;}
+    else if(viagem?.localizacao && !map.getBounds().contains([viagem.localizacao.latitude,viagem.localizacao.longitude])) {
+      map.panTo([viagem.localizacao.latitude,viagem.localizacao.longitude]);
+    }
   }
   async function atualizar() {
     if(ocupado || document.hidden) return;

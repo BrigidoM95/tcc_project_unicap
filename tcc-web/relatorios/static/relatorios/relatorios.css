@@ -1,4 +1,5 @@
 .filtros-relatorio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.filtros-relatorio>button{align-self:center;justify-self:start}
 .filtro-largo{grid-column:1/-1}.opcao-checkbox{display:flex;gap:10px;align-items:center;margin:0}
 .indicadores-relatorio{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .indicadores-relatorio strong{display:block;font-size:32px;color:var(--navy);margin:8px 0}
@@ -9,3 +10,5 @@
 .table-scroll td{overflow-wrap:anywhere;max-width:300px}.filtros-relatorio .errorlist{margin:6px 0;padding-left:18px;font-size:14px}
 @media(max-width:1100px){.indicadores-relatorio{grid-template-columns:repeat(2,minmax(0,1fr))}.filtros-relatorio{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.filtros-relatorio,.indicadores-relatorio{grid-template-columns:1fr}.linha-grafico{grid-template-columns:85px minmax(20px,1fr) 35px;gap:8px;font-size:13px}.cartao{padding:16px}}
+.acoes-relatorio{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.filtros-aplicados ul{display:flex;flex-wrap:wrap;gap:8px 24px;padding-left:20px;margin-bottom:0}

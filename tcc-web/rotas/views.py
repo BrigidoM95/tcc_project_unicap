@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from usuarios.views import eh_administrador
 
@@ -13,10 +14,11 @@ from .models import Rota, PontoEmbarque
 
 @user_passes_test(eh_administrador, login_url="login")
 def listar_rotas(request):
-    filtro_status = request.GET.get("status", "ativas")
+    filtro_status = request.GET.get("status", "ativos")
+    filtro_status = {'ativas':'ativos','inativas':'inativos','todas':'todos'}.get(filtro_status,filtro_status)
 
-    if filtro_status not in ("ativas", "inativas", "todas"):
-        filtro_status = "ativas"
+    if filtro_status not in ("ativos", "inativos", "todos"):
+        filtro_status = "ativos"
 
     busca = request.GET.get("q", "").strip()
 
@@ -24,15 +26,14 @@ def listar_rotas(request):
         "onibus__motorista__user"
     )
 
-    if filtro_status == "ativas":
+    if filtro_status == "ativos":
         rotas = rotas.filter(status=Rota.Status.ATIVA)
-    elif filtro_status == "inativas":
+    elif filtro_status == "inativos":
         rotas = rotas.filter(status=Rota.Status.INATIVA)
 
     if busca:
         rotas = rotas.filter(
             Q(nome__icontains=busca)
-            | Q(origem__icontains=busca)
             | Q(destino__icontains=busca)
             | Q(onibus__codigo__icontains=busca)
             | Q(onibus__placa__icontains=busca)
@@ -41,11 +42,17 @@ def listar_rotas(request):
             | Q(onibus__motorista__user__email__icontains=busca)
         )
 
+    if request.GET.get('pendencia')=='incompleta':
+        from gestao.indicadores import rotas_pendentes
+        rotas=rotas.filter(pk__in=rotas_pendentes().values('pk'))
+    pagina = Paginator(rotas.order_by('nome','pk'),25).get_page(request.GET.get('pagina'))
+    parametros=request.GET.copy();parametros.pop('pagina',None)
     return render(
         request,
         "rotas/listar.html",
         {
-            "rotas": rotas.order_by("nome", "pk"),
+            "rotas": pagina,
+            "objetos": pagina, "parametros": parametros.urlencode(),
             "busca": busca,
             "filtro_status": filtro_status,
             "total": Rota.objects.count(),
@@ -133,7 +140,10 @@ def alterar_status_rota(request, rota_id):
 
     rota.status = novo_status
 
-    if novo_status == Rota.Status.ATIVA:
+    if novo_status == Rota.Status.ATIVA and (not rota.pontos.filter(ativo=True).exists() or not rota.instituicoes.filter(ativa=True).exists()):
+        messages.error(request,'Vincule ao menos um ponto e uma instituição ativos antes de ativar a rota.')
+        return redirect('listar_rotas')
+    if rota.status in Rota.Status.values:
         try:
             rota.full_clean()
         except ValidationError as erro:
@@ -167,7 +177,7 @@ def listar_pontos(request, rota_id):
         "rotas/pontos.html",
         {
             "rota": rota,
-            "pontos": rota.pontos.all(),
+            "pontos": rota.pontos.filter(ativo=True),
         },
     )
 

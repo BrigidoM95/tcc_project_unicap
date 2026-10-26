@@ -9,6 +9,22 @@ from .models import Onibus
 
 class OnibusForm(forms.ModelForm):
 
+    def save(self,commit=True):
+        obj=super().save(commit=False)
+        foto=self.cleaned_data.get('foto')
+        if foto and 'foto' in self.changed_data:
+            from PIL import Image,ImageOps
+            from io import BytesIO
+            from django.core.files.base import ContentFile
+            import uuid
+            foto.seek(0)
+            with Image.open(foto) as imagem:
+                mini=ImageOps.exif_transpose(imagem).convert('RGB');mini.thumbnail((320,240))
+                buffer=BytesIO();mini.save(buffer,format='JPEG',quality=85)
+            foto.seek(0);obj.miniatura.save(f'{uuid.uuid4().hex}.jpg',ContentFile(buffer.getvalue()),save=False)
+        if commit:obj.save();self.save_m2m()
+        return obj
+
     class Meta:
         model = Onibus
 
@@ -18,7 +34,6 @@ class OnibusForm(forms.ModelForm):
             "capacidade",
             "motorista",
             "foto",
-            "situacao",
             "observacoes",
         ]
 

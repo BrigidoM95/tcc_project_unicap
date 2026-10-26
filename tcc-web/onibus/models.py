@@ -6,7 +6,7 @@ from django.core.validators import (
     MaxValueValidator,
     MinValueValidator,
 )
-from django.db import models
+from django.db import models, transaction
 
 from usuarios.models import Usuario
 
@@ -18,13 +18,19 @@ def validar_tamanho_foto(arquivo):
 
     limite = 5 * 1024 * 1024
 
-    if arquivo.size > limite:
+    try:
+        tamanho = arquivo.size
+    except FileNotFoundError:
+        # Alguns cadastros legados apontam para fotos que não vieram no projeto.
+        return
+    if tamanho > limite:
         raise ValidationError(
             "A foto do ônibus deve possuir no máximo 5 MB."
         )
 
 
 class Onibus(models.Model):
+    miniatura = models.ImageField(upload_to='onibus/miniaturas/',blank=True,editable=False)
 
     class Status(models.TextChoices):
         ATIVO = "ativo", "Ativo"
@@ -97,11 +103,7 @@ class Onibus(models.Model):
         verbose_name="Status",
     )
 
-    class Situacao(models.TextChoices):
-        APTO = 'apto', 'Apto para uso'
-        REVISAO = 'revisao', 'Revisão programada'
-        MANUTENCAO = 'manutencao', 'Em manutenção (indisponível)'
-    situacao = models.CharField('Estado do veículo',max_length=20,choices=Situacao.choices,default=Situacao.APTO)
+
     observacoes = models.TextField(
         max_length=500,
         blank=True,
@@ -122,6 +124,8 @@ class Onibus(models.Model):
         verbose_name = "Ônibus"
         verbose_name_plural = "Ônibus"
         ordering = ["codigo"]
+        constraints = [models.CheckConstraint(condition=models.Q(capacidade__gte=1, capacidade__lte=46), name='onibus_capacidade_1_46')]
+
 
     def __str__(self):
         return (
@@ -132,10 +136,23 @@ class Onibus(models.Model):
 
     @property
     def ativo(self):
-        return self.status == self.Status.ATIVO and self.situacao != self.Situacao.MANUTENCAO
+        return self.status == self.Status.ATIVO
+
+    @property
+    def foto_url(self):
+        return self.foto.url if self.foto and self.foto.storage.exists(self.foto.name) else ''
+
+    @property
+    def miniatura_url(self):
+        return self.miniatura.url if self.miniatura and self.miniatura.storage.exists(self.miniatura.name) else self.foto_url
 
     def clean(self):
         super().clean()
+
+        if self.pk:
+            anterior = type(self).objects.get(pk=self.pk)
+            if self.viagens.filter(status='em_andamento').exists() and any(getattr(anterior, f) != getattr(self, f) for f in ['status','capacidade','motorista_id']):
+                raise ValidationError('Há uma viagem em andamento. Use a intervenção administrativa da viagem.')
 
         # ==================================================
         # VALIDAÇÃO DA PLACA
@@ -220,18 +237,23 @@ class Onibus(models.Model):
                 codigo=self.codigo
             )
 
+    @transaction.atomic
     def desativar(self):
-
-        if self.status != self.Status.INATIVO:
-
-            self.status = self.Status.INATIVO
-
-            self.save(
-                update_fields=[
-                    "status",
-                    "atualizado_em",
-                ]
-            )
+        # Um único comando mantém ônibus e rotas consistentes e auditados.
+        atual = type(self).objects.select_for_update().get(pk=self.pk)
+        rotas = list(atual.rotas.select_for_update().filter(status='ativa').order_by('pk'))
+        if atual.viagens.filter(status='em_andamento').exists() or any(
+            rota.viagens.filter(status='em_andamento').exists() for rota in rotas
+        ):
+            raise ValidationError('Há uma viagem em andamento. Encerre a viagem ou use a intervenção administrativa antes de inativar o ônibus.')
+        atual.status = self.Status.INATIVO
+        for rota in rotas:
+            rota.status = 'inativa'
+            rota.save(update_fields=['status'])
+        atual.save(update_fields=['status', 'atualizado_em'])
+        self.status = atual.status
+        self.atualizado_em = atual.atualizado_em
+        return rotas
 
     def reativar(self):
 

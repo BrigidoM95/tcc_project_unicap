@@ -3,6 +3,6 @@
 {% block conteudo %}<header class="cabecalho"><div><h1>Acompanhar viagens</h1><p class="subtitulo">Posição do ônibus, ocupação e pontos cadastrados.</p></div></header>
 <div class="cartao"><div class="mapa-controles"><div><label for="selecao">Viagem em andamento ou rota</label><select id="selecao"><option>Carregando...</option></select></div><button id="atualizar" type="button">Atualizar</button><button id="centralizar" type="button" class="secundario">Enquadrar mapa</button></div>
 <p id="status-mapa" class="mapa-status" role="status" aria-live="polite">Buscando viagens...</p><div id="mapa" aria-label="Mapa das viagens e pontos de embarque"></div>
-<p class="ajuda">Atualização a cada 10 segundos. Laranja: posição e percurso GPS recente. Azul: pontos cadastrados. As linhas entre pontos são referências, não navegação pelas ruas. Localizações com mais de 60 segundos recebem aviso.</p>
+<p class="ajuda">Atualização a cada 10 segundos. Laranja: posição e percurso observado pelo GPS. O círculo indica a precisão estimada; posições com mais de 60 segundos recebem aviso. Os pontos de embarque cadastrados estão listados abaixo.</p>
 <div id="pontos-mapa"></div></div>
 <script src="{% static 'rotas/vendor/leaflet/leaflet.js' %}"></script><script src="{% static 'rotas/mapa.js' %}" defer></script>{% endblock %}

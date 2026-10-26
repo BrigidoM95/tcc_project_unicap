@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
 
 from rest_framework import status
 from rest_framework.permissions import BasePermission, SAFE_METHODS
@@ -106,8 +107,11 @@ def listar_onibus(request):
         status=Onibus.Status.INATIVO
     ).count()
 
+    pagina = Paginator(queryset,25).get_page(request.GET.get('pagina'))
+    parametros = request.GET.copy(); parametros.pop('pagina',None)
     contexto = {
-        "onibus": queryset,
+        "onibus": pagina,
+        "objetos": pagina, "parametros": parametros.urlencode(),
         "busca": busca,
         "filtro_status": filtro_status,
         "total": total,
@@ -228,7 +232,7 @@ def editar_onibus(
         contexto,
     )
 
-@require_POST
+@require_http_methods(['GET','POST'])
 @user_passes_test(
     eh_administrador,
     login_url="login",
@@ -243,15 +247,30 @@ def alterar_status_onibus(
         pk=onibus_id,
     )
 
-    if onibus.status == Onibus.Status.ATIVO:
+    if request.method == 'GET' or (onibus.ativo and request.POST.get('confirmar') != '1'):
+        return render(request, 'onibus/confirmar_status.html', {
+            'onibus': onibus,
+            'rotas': onibus.rotas.filter(status='ativa').order_by('nome','pk'),
+        })
 
-        onibus.desativar()
+    novo_status = request.POST.get('status')
+    if novo_status not in (Onibus.Status.ATIVO, Onibus.Status.INATIVO):
+        messages.error(request, 'Selecione a alteração de status desejada.')
+        return redirect('alterar_status_onibus', onibus_id=onibus.pk)
+
+    if novo_status == Onibus.Status.INATIVO:
+
+        try:
+            rotas = onibus.desativar()
+        except ValidationError as erro:
+            messages.error(request, ' '.join(erro.messages))
+            return redirect('listar_onibus')
 
         messages.success(
             request,
             (
                 f"Ônibus {onibus.codigo} "
-                "inativado com sucesso."
+                f"inativado com sucesso. {len(rotas)} rota(s) inativada(s)."
             ),
         )
 
@@ -259,9 +278,10 @@ def alterar_status_onibus(
 
         try:
 
-            onibus.full_clean()
+            onibus.status = Onibus.Status.ATIVO
+            onibus.full_clean(exclude=['foto'])
 
-            onibus.reativar()
+            onibus.save(update_fields=['status','atualizado_em'])
 
             messages.success(
                 request,
@@ -502,7 +522,10 @@ class DesativarOnibusApiView(APIView):
             pk=onibus_id,
         )
 
-        onibus.desativar()
+        try:
+            onibus.desativar()
+        except ValidationError as erro:
+            return Response({'detail':' '.join(erro.messages)},status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {

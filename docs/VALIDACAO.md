@@ -1,52 +1,98 @@
-# Validação da entrega — 12/10/2026
+# Validação — versão 4 de 18/10/2026
 
-## Verificações executadas
+Este documento conserva a validação da entrega de 18/10. A validação das correções posteriores está em [CORRECOES_2026-10-26.md](CORRECOES_2026-10-26.md).
 
-| Verificação | Resultado e alcance |
+## Resultados finais
+
+| Verificação | Resultado |
 |---|---|
-| Django | 99 testes aprovados, incluindo autenticação, permissões, viagens, GPS, matrícula anual, check-in, duplicidade, lotação, histórico, relatórios, PDF, despesas e auditoria. |
-| Flutter | 13 testes aprovados: login, widgets, sessão, renovação concorrente de token, cache de consulta, logout e falha de rede no check-in. |
-| Análise Flutter | `flutter analyze`: nenhuma ocorrência. |
-| Flutter Web | Compilação release concluída com Flutter 3.38.1 / Dart 3.10.0. Renderizador e fontes distribuídos localmente. |
-| Migrations | Modelos sem alterações pendentes; banco original atualizado sem perda nas contagens conferidas. Repetição de migrate concluída sem novas alterações. |
-| Backup SQLite | Arquivo gerado, banco extraído e `PRAGMA integrity_check` aprovado; contagens iguais às da origem. |
-| Configuração Django | `check`, `check --deploy` com configuração de produção e `collectstatic` concluídos. |
-| Painel no navegador | Home, mapa, gestão, matrículas, auditoria, cadastro de usuários/ônibus e relatórios carregaram. Telas verificadas em computador e telas selecionadas em 390 × 844, sem transbordamento horizontal nos resultados registrados. |
-| Aplicativo no navegador | Login do motorista, início de viagem, localização simulada enviada à API, mapa, login fiscal, QR, login associado, check-in manual e consulta ao histórico executados. |
-| Integração com relatório | O embarque feito pela interface apareceu no relatório administrativo e a exportação PDF respondeu corretamente. |
+| Backend SQLite | **156 testes aprovados**, 31,295 s. Base de teste separada. |
+| Backend PostgreSQL | **156 testes aprovados**, 41,359 s. Schema aleatório isolado, sem public no search_path, removido ao terminar. |
+| Flutter | **22 testes aprovados**: API, JWT/cache, fila offline/GPS, login e telas dos três perfis. |
+| Análise Flutter | Sem ocorrências. |
+| Build Flutter web | Release concluída em `build/web`, base `/app/`, sem CDN de recursos. |
+| Migrações de modelos | `makemigrations --check --dry-run`: nenhuma alteração pendente. |
+| Ensaio de migração | Cinco migrações v4 aplicadas numa cópia nova; 27 tabelas comparadas, integridade e chaves estrangeiras válidas. |
+| Migração real | **Cinco migrações aplicadas após autorização.** Sem pendências; `check` e `makemigrations --check --dry-run` aprovados. |
+| Banco real e backup final | 29 tabelas comparadas diretamente, incluindo horários; integridade e chaves estrangeiras válidas. |
+| Páginas após migração | Onze páginas renderizadas com status 200 na base real; consultas em transação somente de leitura. Instituições ativas conferidas no formulário. |
+| Utilitário de backup | Um teste adicional de regressão aprovado: cópia fiel de todas as tabelas e arquivo de origem inalterado. |
+| Estáticos | `collectstatic`: 3 arquivos atualizados, 171 preservados e 440 processados. |
+| Revisão mobile | 29 capturas regeneradas. Mapas de 16/46 lugares sem rolagem em 390 × 844; motorista também verificado em 360 px. |
+| Revisão web | Navegador local com base exclusivamente fictícia: visão geral, nova instituição selecionável no cadastro, embarques por sentido e busca de frequência por RUA. Capturas em `docs/previas-web`. |
 
-As contagens da cópia original permaneceram: 3 contas de autenticação, 1 perfil cadastrado, 1 ônibus, 1 rota, 6 viagens e 0 check-ins. As validações funcionais no navegador usaram outra base, com dados fictícios.
+Ambiente: Windows, Python 3.14.8, Flutter 3.47.7 e Dart 3.13.5. Não foi produzido um APK novo nesta revisão; eventual APK anterior não representa a v4. Não houve publicação em servidor ou loja.
 
-O mapa do navegador foi verificado com geolocalização simulada e respostas locais para as imagens da camada cartográfica. Isso verifica marcadores, interface e integração com a API; não é homologação do serviço externo de mapas nem de GPS/câmera físicos. O código manual foi testado pela interface; leitura óptica de QR precisa de aparelho e câmera reais.
+## Cobertura relevante
 
-Ambiente do backend: Python 3.12.14, Django 6.0.5, Django REST Framework 3.18.0 e SQLite. PostgreSQL/Docker não foram executados neste ambiente. O projeto inclui configuração de implantação e workflow de CI com PostgreSQL; esse workflow ainda precisa rodar no repositório.
+O backend cobre os horários 07:59/08:00, abertura antecipada pelo motorista, persistência após dez minutos, escolha de ida/volta, colisão de poltrona, pontos inválidos/inativos, troca entre ônibus, cancelamento, fim da ida, retorno antecipado, apenas volta, origem online/offline, justificativas manuais, reserva do próprio associado vista pelo fiscal e auditoria.
 
-## Executar os testes no seu computador
+Também cobre exclusividade transacional, autenticação e acesso por perfil, GPS, geração/encerramento das viagens, remoção de campos/telas, senha gerada sem troca obrigatória, instituição/curso, paginação de embarques, indicadores distintos e filtros de frequência no HTML/PDF.
 
-Na raiz do projeto, após instalar:
+O teste de migração comprova que uma reserva já vencida continua vencida, enquanto uma vigente é adaptada para a virada das 03:00. O ensaio compara os valores das colunas comuns das tabelas preservadas; `expira_em` é excluído do hash por sofrer adaptação intencional, coberta pelo teste. Tabelas internas de migrações, permissões e tipos de conteúdo também são excluídas. As únicas tabelas de domínio removidas são as previstas para matrícula anual e fechamento mensal.
+
+Os testes Flutter verificam pontos obrigatórios mesmo com GPS, mapa completo, horário de abertura no fuso da operação, bloqueio após partida mesmo com ônibus cheio, tela do QR, fila pendente/confirmada/recusada e login direto. A câmera é simulada; a imagem de erro de permissão na prévia não é um teste óptico.
+
+## Evidências locais
+
+- `tmp/testes-v4-completos.log`
+- `tmp/testes-postgres-v4.log`
+- `tmp/flutter-analyze-v4-final.log`
+- `tmp/flutter-test-v4.log`
+- `tmp/flutter-build-v4.log`
+- `tmp/migracao-copia-v4-final.log`
+- `tmp/v4-validacao-final.validacao.json`
+- [Galeria mobile](previas-mobile/index.html)
+- [Instituição recém-criada no cadastro](previas-web/v4-instituicao-no-cadastro.png)
+- [Visão geral](previas-web/v4-visao-geral.png)
+- [Embarques](previas-web/v4-embarques.png)
+- [Frequência filtrada](previas-web/v4-frequencia.png)
+
+## Conferência do banco real e correção do backup
+
+A migração foi aplicada às 23:26 UTC de 18/10/2026 após a confirmação do usuário. Contas e perfis existentes foram conservados. A cópia final é `backups/v4/aplicacao-real/depois-v4-verificado.sqlite3`; os relatórios `verificacao.json` e `integracao.json` registram a comparação direta de 29 tabelas com o PostgreSQL.
+
+A validação anterior em cópia não detectava dois defeitos do gerador: migrações históricas podiam operar sobre a origem e datas automáticas eram regeneradas somente na cópia. O utilitário foi corrigido para materializar o schema sem executar RunPython e conservar essas datas. O novo teste `scripts/test_backup_portatil.py` passou e verifica também que o hash da origem não muda.
+
+O efeito sobre duas viagens e um check-in foi reparado com base nos registros anteriores de auditoria: viagens 7/8 voltaram a ciclo completo, viagem 8 a `no_destino`, e check-in 1 a `retorno`, sem indicação de legado. Três registros novos documentam o reparo. O comparativo com o backup antigo exclui apenas as datas que aquela versão do utilitário havia regenerado e as adaptações previstas; a conferência final usa a cópia corrigida e inclui todos os campos e horários.
+
+Não foi iniciado o processo contínuo nem executada a manutenção de viagens na base real durante esta conferência; ela ocorrerá normalmente ao iniciar o sistema. A página de operação, que executa essa manutenção, ficou fora das onze consultas somente de leitura.
+
+## Repetir
+
+No diretório `tcc-web`:
 
 ```powershell
-.\.venv\Scripts\python.exe tcc-web\manage.py makemigrations --check --dry-run
-.\.venv\Scripts\python.exe tcc-web\manage.py test --settings=config.test_settings --noinput
-flutter analyze
-flutter test
-flutter build web --no-web-resources-cdn --base-href /app/
+$env:DB_ENGINE='sqlite'
+$env:DJANGO_DEBUG='true'
+& ../.venv/Scripts/python.exe manage.py makemigrations --check --dry-run
+& ../.venv/Scripts/python.exe manage.py test --settings=config.test_settings --noinput
 ```
 
-Use o comando com `config.test_settings` somente para testes. Ele utiliza hash de senha rápido e cache temporário para os testes; não é configuração de execução normal ou produção. Os testes do Django criam um banco de testes separado.
+Em outro terminal com as variáveis do PostgreSQL configuradas:
 
-## Homologação com a associação
+```powershell
+$env:DB_ENGINE='postgres'
+& ../.venv/Scripts/python.exe manage.py test --settings=config.test_postgres_schema --noinput
+```
 
-Antes do piloto de um ônibus e aproximadamente dez pessoas:
+O runner cria e remove somente seu schema temporário. Não aceita `--parallel` nem `--keepdb`. As configurações de teste não devem iniciar o sistema normal.
 
-1. Instale em servidor HTTPS e execute a suíte também no PostgreSQL escolhido.
-2. Confira cadastros, perfis, telefones, motorista vinculado, matrícula anual, capacidade e pontos com coordenadas corretas.
-3. Faça o fluxo de ida e retorno em aparelhos físicos, incluindo câmera, código manual, GPS, permissões negadas e recuperação de rede.
-4. Verifique bloqueios de duplicidade e lotação com tentativas simultâneas no servidor do piloto.
-5. Compare lista do fiscal, histórico do associado, relatório e PDF com os embarques reais.
-6. Verifique backup agendado e restaure uma cópia em ambiente separado.
-7. Meça tempo de resposta, precisão GPS e consumo de bateria no percurso; registre ocorrências para correção.
+Na raiz do Flutter:
 
-Requisitos quantitativos do TCC — 500 usuários simultâneos, até 2 segundos por check-in, 99% de disponibilidade e precisão de GPS de 10 metros — não foram comprovados por esta validação. Não devem ser apresentados como resultados já alcançados.
+```powershell
+flutter analyze
+flutter test --dart-define=CAPTURAR_TELAS=true
+flutter build web --no-web-resources-cdn --base-href /app/
+& ./.venv/Scripts/python.exe scripts/gerar_previas.py
+```
 
-A compilação Android, a compilação iOS, a assinatura/publicação em lojas e a hospedagem em domínio real continuam dependentes dos ambientes e contas correspondentes. O GPS desta versão depende de manter o painel do motorista ativo; rastreamento em segundo plano não foi implementado.
+Neste ambiente a ferramenta Flutter foi executada pelo snapshot do SDK, equivalente aos comandos acima, para contornar a espera do script de inicialização por bloqueio de cache. As capturas usam dados fictícios. O teste adicional do backup pode ser repetido com `.venv/Scripts/python.exe scripts/test_backup_portatil.py`.
+
+Para repetir o ensaio de dados, use `scripts/validar_copia_v4.py BACKUP DESTINO_NOVO.sqlite3`, com destino novo dentro do projeto. Não use a base de operação como destino.
+
+## Homologação física
+
+Ainda precisam de teste em aparelho: leitura óptica do QR, permissões, GPS no percurso, tela bloqueada, economia de bateria, perda/recuperação de sinal, sincronização ao reabrir o app e abertura real às 08:00 em America/Campo_Grande. Os limites de precisão GPS, carga de 500 usuários, check-in em dois segundos e disponibilidade dependem de medição em operação.
+
+Docker/HTTPS, restauração do dump em produção, assinatura release e iOS não foram executados nesta revisão. O backup local disponível é uma cópia consistente das tabelas Django com manifesto e mídia, pois pg_dump não está instalado; não inclui roles/extensões externas ao Django.

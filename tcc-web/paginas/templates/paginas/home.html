@@ -1,10 +1,24 @@
 {% extends "paginas/base.html" %}
 {% block titulo %}Visão geral{% endblock %}
-{% block conteudo %}<header class="cabecalho"><div><h1>Visão geral</h1><p class="subtitulo">Gerencie a operação do transporte universitário.</p></div></header>
-<section class="modulos" aria-label="Módulos do sistema">
-<article class="modulo"><span class="numero">01 / CADASTROS</span><h2>Usuários</h2><p>Gerencie associados, fiscais, motoristas e administradores.</p><a class="botao" href="{% url 'listar_usuarios' %}">Gerenciar usuários</a></article>
-<article class="modulo"><span class="numero">02 / FROTA</span><h2>Ônibus</h2><p>Consulte veículos, capacidade e motoristas vinculados.</p><a class="botao" href="{% url 'listar_onibus' %}">Gerenciar ônibus</a></article>
-<article class="modulo"><span class="numero">03 / PERCURSOS</span><h2>Rotas</h2><p>Organize os trajetos, horários e pontos de embarque.</p><a class="botao" href="{% url 'listar_rotas' %}">Gerenciar rotas</a></article>
-<article class="modulo"><span class="numero">04 / PRESENÇAS</span><h2>Embarques</h2><p>Acompanhe os registros de presença dos associados por viagem.</p><a class="botao" href="{% url 'presencas_embarque' %}">Consultar embarques</a></article>
-<article class="modulo"><span class="numero">05 / RELATÓRIOS</span><h2>Relatórios</h2><p>Consulte frequência, utilização e ocupação das viagens. Exporte os resultados em PDF.</p><a class="botao" href="{% url 'relatorios:painel' %}">Consultar relatórios</a></article>
-</section>{% endblock %}
+{% block conteudo %}
+<header class="cabecalho"><div><h1>Visão geral</h1><p class="subtitulo">Gerencie a operação do transporte universitário.</p></div></header>
+<nav class="atalhos-painel" aria-label="Módulos do sistema">
+<a href="{% url 'listar_usuarios' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/></svg><strong>Usuários</strong><small>Gerenciar cadastros</small></a>
+<a href="{% url 'listar_onibus' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="18" rx="3"/><path d="M4 12h16M6 20v2m12-2v2M8 16h1m6 0h1M8 6h8"/></svg><strong>Ônibus</strong><small>Gerenciar a frota</small></a>
+<a href="{% url 'listar_rotas' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="5" r="3"/><circle cx="19" cy="19" r="3"/><path d="M9 5h7a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h7"/></svg><strong>Rotas</strong><small>Trajetos e horários</small></a>
+<a href="{% url 'presencas_embarque' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3V1m6 2V1M8 12l3 3 5-6"/></svg><strong>Embarques</strong><small>Acompanhar presenças</small></a>
+<a href="{% url 'relatorios:painel' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v20h19M7 17v-5m5 5V8m5 9V4"/></svg><strong>Relatórios</strong><small>Consultar frequência</small></a>
+</nav>
+<section class="resumos" aria-label="Indicadores">{% for nome,valor in cards.items %}<article class="resumo">{{ nome }}<strong>{{ valor }}</strong>{% if nome == "Reservas do dia" %}<small>alunos que escolheram ônibus hoje</small>{% endif %}</article>{% endfor %}</section>
+<div class="pendencias-painel">
+<section class="cartao"><h2>Associados sem instituição / curso</h2><p>{{ total_sem_curso }} cadastro(s) precisam de complemento.</p>
+{% for p in associados_sem_curso %}<div class="linha-pendencia"><div><strong>{{ p }}</strong><small>{{ p.rua }} · Instituição / curso não informado</small></div><a href="{% url 'editar_usuario' p.pk %}">Completar</a></div>{% empty %}<p>Nenhuma pendência.</p>{% endfor %}
+{% if total_sem_curso %}<a href="{% url 'listar_usuarios' %}?pendencia=sem_curso">Ver todos ({{ total_sem_curso }})</a>{% endif %}</section>
+<section class="cartao"><h2>Cadastros que precisam de complemento</h2><p>{{ total_rotas_incompletas }} rota(s) precisam de complemento.</p>
+{% for r in rotas_incompletas %}<div class="linha-pendencia"><div><strong>{{ r.nome }}</strong><small>{% if not r.tem_instituicoes %}Sem instituição{% endif %}{% if not r.tem_instituicoes and not r.tem_pontos %} · {% endif %}{% if not r.tem_pontos %}Sem ponto ativo{% endif %}</small></div><a href="{% url 'editar_rota' r.pk %}">Completar</a></div>{% empty %}<p>Nenhuma pendência.</p>{% endfor %}
+{% if total_rotas_incompletas %}<a href="{% url 'listar_rotas' %}?pendencia=incompleta">Ver todos ({{ total_rotas_incompletas }})</a>{% endif %}</section>
+</div>
+<section class="cartao acoes-compactas" id="ultimas-acoes"><h2>Últimas ações</h2>
+<nav class="abas-acoes" aria-label="Páginas de ações"><a href="?acoes=1#ultimas-acoes" {% if acoes_pagina == 1 %}aria-current="page"{% endif %}>1–10</a><a href="?acoes=2#ultimas-acoes" {% if acoes_pagina == 2 %}aria-current="page"{% endif %}>11–20</a></nav>
+<div class="table-scroll"><table><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th></tr></thead><tbody>{% for a in ultimas_acoes %}<tr><td>{{ a.criado_em|date:"d/m H:i" }}</td><td>{{ a.usuario.get_full_name|default:"Sistema" }}</td><td>{{ a.descricao|default:a.acao }}</td></tr>{% empty %}<tr><td colspan="3">Nenhuma ação registrada.</td></tr>{% endfor %}</tbody></table></div><a href="{% url 'gestao:auditoria' %}">Ver auditoria completa</a></section>
+{% endblock %}

@@ -12,7 +12,7 @@ from django.db import transaction
 from django.utils import timezone
 from usuarios.models import Usuario, Instituicao, Curso
 from onibus.models import Onibus
-from rotas.models import Rota, PontoEmbarque
+from rotas.models import Rota, PontoEmbarque,Ponto
 from gestao.models import Despesa
 class Command(BaseCommand):
     help='Cria quatro perfis fictícios em banco vazio (DEBUG=true). Solicita uma senha.'
@@ -30,15 +30,17 @@ class Command(BaseCommand):
         for tipo in ['administrador','motorista','fiscal','associado']:
             user=User.objects.create_user(f'{tipo}@demo.unicap',f'{tipo}@demo.unicap',senha,
                 first_name=tipo.capitalize()+' Demonstração',is_staff=tipo=='administrador',is_superuser=tipo=='administrador')
-            perfis[tipo]=Usuario.objects.create(user=user,tipo=tipo,telefone='67999990000',curso=c if tipo=='associado' else None)
+            perfis[tipo]=Usuario.objects.create(user=user,tipo=tipo,telefone='67999990000',curso=c if tipo in ('associado','fiscal') else None)
         bus=Onibus(nome='Veículo de demonstração',placa='DEM1A23',capacidade=46,motorista=perfis['motorista'])
         foto=Path(__file__).resolve().parents[4]/'assets/onibusAzul.png'
         if foto.exists(): bus.foto.save('demonstracao.png',ContentFile(foto.read_bytes()),save=False)
         bus.save()
-        r=Rota.objects.create(nome='Rota de demonstração',origem='Centro',destino='Campus',onibus=bus,horario_ida='18:00',horario_retorno='22:30')
+        r=Rota.objects.create(nome='Rota de demonstração',destino='Campus',onibus=bus,horario_ida='18:00',horario_retorno='22:30',fiscal=perfis['fiscal'])
+        r.instituicoes.add(i)
         for sentido in ['ida','retorno']:
-            for ordem,(nome,lat,lon) in enumerate([('Ponto demonstrativo A',-22.634,-54.821),('Ponto demonstrativo B',-22.622,-54.809)],1):
-                PontoEmbarque.objects.create(rota=r,nome=nome,endereco='Coordenada fictícia para demonstração',sentido=sentido,ordem=ordem,latitude=lat,longitude=lon)
+            for ordem,nome in enumerate(['Ponto demonstrativo A','Ponto demonstrativo B'],1):
+                p,_=Ponto.objects.get_or_create(nome=nome,defaults={'endereco':'Endereço de demonstração'})
+                PontoEmbarque.objects.create(rota=r,ponto=p,nome=nome,endereco='Endereço de demonstração',sentido=sentido,ordem=ordem)
         Despesa.objects.create(onibus=bus,data=timezone.localdate(),categoria='combustivel',descricao='Despesa fictícia de demonstração',valor='250.00')
         self.stdout.write(self.style.SUCCESS('Demonstração criada. Nenhum embarque ou GPS real foi gerado.'))
         for tipo in perfis:self.stdout.write(f'{tipo}@demo.unicap')

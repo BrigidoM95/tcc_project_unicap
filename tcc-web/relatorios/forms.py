@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from onibus.models import Onibus
 from rotas.models import PontoEmbarque, Rota, Viagem
-from usuarios.models import Usuario
+from usuarios.models import Usuario, Instituicao
 
 
 class FiltrosRelatorioForm(forms.Form):
@@ -21,13 +21,23 @@ class FiltrosRelatorioForm(forms.Form):
         label="Ônibus", queryset=Onibus.objects.none(), required=False,
         empty_label="Todos os ônibus",
     )
+    freq_q = forms.CharField(
+        label="Associado: nome, e-mail ou RUA", required=False, min_length=2,
+        max_length=150, help_text="Digite pelo menos 2 caracteres.",
+    )
+    freq_instituicao = forms.ModelChoiceField(
+        label="Instituição", queryset=Instituicao.objects.order_by("nome"),
+        required=False, empty_label="Todas as instituições",
+    )
+    # Compatibilidade com links antigos. A tela usa uma única busca de
+    # associado e inclui automaticamente as rotas do ônibus escolhido.
     rota = forms.ModelChoiceField(
         label="Rota", queryset=Rota.objects.none(), required=False,
-        empty_label="Todas as rotas",
+        empty_label="Todas as rotas", widget=forms.HiddenInput,
     )
     associado = forms.ModelChoiceField(
         label="Associado", queryset=Usuario.objects.none(), required=False,
-        empty_label="Todos os associados",
+        empty_label="Todos os associados", widget=forms.HiddenInput,
     )
     sentido = forms.ChoiceField(
         label="Sentido", choices=[("", "Ida e retorno"), *Viagem.Sentido.choices],

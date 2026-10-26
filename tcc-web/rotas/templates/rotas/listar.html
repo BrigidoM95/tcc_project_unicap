@@ -15,6 +15,7 @@
 </div>
 
 <div class="cartao">
+    {% include 'paginas/filtro_status.html' %}
     <form method="get" class="filtros">
         <input
             type="search"
@@ -24,20 +25,8 @@
             aria-label="Buscar rotas"
         >
 
-        <select name="status" aria-label="Filtrar por status">
-            <option value="ativas"
-                {% if filtro_status == "ativas" %}selected{% endif %}>
-                Ativas
-            </option>
-            <option value="inativas"
-                {% if filtro_status == "inativas" %}selected{% endif %}>
-                Inativas
-            </option>
-            <option value="todas"
-                {% if filtro_status == "todas" %}selected{% endif %}>
-                Todas
-            </option>
-        </select>
+        <input type="hidden" name="status" value="{{ filtro_status }}">
+        {% if request.GET.pendencia %}<input type="hidden" name="pendencia" value="{{ request.GET.pendencia }}">{% endif %}
 
         <button class="botao" type="submit">Filtrar</button>
         <a class="botao secundario" href="{% url 'listar_rotas' %}">
@@ -62,12 +51,12 @@
             {% for rota in rotas %}
                 <tr>
                     <td>
-                        <strong>{{ rota.nome }}</strong>
+                        <strong><a href="{% url 'detalhe_rota' rota.pk %}">{{ rota.nome }}</a></strong>
                         {% if rota.observacoes %}
                             <small>{{ rota.observacoes }}</small>
                         {% endif %}
                     </td>
-                    <td>{{ rota.origem }} → {{ rota.destino }}</td>
+                    <td>{{ rota.destino }}</td>
                     <td>
                         {{ rota.onibus.codigo }} — {{ rota.onibus.placa }}
                         <small>{{ rota.motorista }}</small>
@@ -100,7 +89,7 @@
                                 Pontos
                             </a>
 
-                            <form method="post"
+                            <form method="post" onsubmit="return confirm('Confirmar alteração da situação da rota?')"
                                   action="{% url 'alterar_status_rota' rota.pk %}">
                                 {% csrf_token %}
 
@@ -131,4 +120,5 @@
         </tbody>
     </table>
 </div>
+{% include 'gestao/paginacao.html' %}
 {% endblock %}

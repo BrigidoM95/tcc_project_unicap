@@ -53,30 +53,7 @@
 
     <section class="filtros-container">
 
-        <div class="filtros">
-
-            <a
-                href="?status=ativos&q={{ busca }}"
-                class="filtro {% if filtro_status == 'ativos' %}ativo{% endif %}"
-            >
-                Ativos
-            </a>
-
-            <a
-                href="?status=inativos&q={{ busca }}"
-                class="filtro {% if filtro_status == 'inativos' %}ativo{% endif %}"
-            >
-                Inativos
-            </a>
-
-            <a
-                href="?status=todos&q={{ busca }}"
-                class="filtro {% if filtro_status == 'todos' %}ativo{% endif %}"
-            >
-                Todos
-            </a>
-
-        </div>
+        {% include 'paginas/filtro_status.html' %}
 
 
         <form method="get" class="busca">
@@ -130,10 +107,10 @@
 
                         <td>
 
-                            {% if item.foto %}
+                            {% if item.foto_url %}
 
                                 <img
-                                    src="{{ item.foto.url }}"
+                                    src="{{ item.miniatura_url }}"
                                     class="foto"
                                     alt="Foto do ônibus {{ item.codigo }}"
                                 >
@@ -147,7 +124,7 @@
                         </td>
 
                         <td>
-                            <strong>{{ item.codigo }}</strong>
+                            <strong><a href="{% url 'detalhe_onibus' item.pk %}">{{ item.codigo }}</a></strong>
                         </td>
 
                         <td>
@@ -208,37 +185,9 @@
                                 </a>
 
 
-                                <form
-                                    method="post"
-                                    action="{% url 'alterar_status_onibus' item.id %}"
-                                >
-
-                                    {% csrf_token %}
-
-
-                                    {% if item.status == "ativo" %}
-
-                                        <button
-                                            type="submit"
-                                            class="botao inativar"
-                                            onclick="return confirm('Deseja realmente inativar este ônibus?');"
-                                        >
-                                            Inativar
-                                        </button>
-
-                                    {% else %}
-
-                                        <button
-                                            type="submit"
-                                            class="botao reativar"
-                                            onclick="return confirm('Deseja realmente reativar este ônibus?');"
-                                        >
-                                            Reativar
-                                        </button>
-
-                                    {% endif %}
-
-                                </form>
+                                <a href="{% url 'alterar_status_onibus' item.id %}" class="botao {% if item.ativo %}inativar{% else %}reativar{% endif %}">
+                                    {% if item.ativo %}Inativar{% else %}Reativar{% endif %}
+                                </a>
 
                             </div>
 
@@ -268,4 +217,5 @@
 </div>
 
 
+{% include 'gestao/paginacao.html' %}
 {% endblock %}

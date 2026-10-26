@@ -20,3 +20,4 @@ ios/Pods/
 backups/
 dados-migracao.json
 *.pyc
+tmp/

@@ -70,22 +70,22 @@ class Modulo1UsuariosTests(TestCase):
 
         self.assertEqual(
             self.associado.rua,
-            f"RUA{self.associado.pk:06d}",
+            f"802.{self.associado.pk:03d}",
         )
 
-    def test_fiscal_nao_possui_rua(self):
-        self.assertIsNone(self.fiscal.rua)
+    def test_fiscal_possui_rua(self):
+        self.assertEqual(self.fiscal.rua, f"802.{self.fiscal.pk:03d}")
 
-    def test_motorista_nao_possui_rua(self):
-        self.assertIsNone(self.motorista.rua)
+    def test_motorista_possui_rua(self):
+        self.assertEqual(self.motorista.rua, f"802.{self.motorista.pk:03d}")
 
-    def test_rua_removido_quando_associado_muda_de_tipo(self):
+    def test_rua_preservado_quando_associado_muda_de_tipo(self):
         self.associado.tipo = Usuario.Tipo.FISCAL
         self.associado.save()
 
         self.associado.refresh_from_db()
 
-        self.assertIsNone(self.associado.rua)
+        self.assertEqual(self.associado.rua, f"802.{self.associado.pk:03d}")
 
     def test_rua_volta_quando_usuario_vira_associado(self):
         usuario = self.fiscal
@@ -97,7 +97,7 @@ class Modulo1UsuariosTests(TestCase):
 
         self.assertEqual(
             usuario.rua,
-            f"RUA{usuario.pk:06d}",
+            f"802.{usuario.pk:03d}",
         )
 
     # =========================================================
@@ -219,8 +219,8 @@ class Modulo1UsuariosTests(TestCase):
             Usuario.Tipo.FISCAL,
         )
 
-        self.assertIsNone(
-            dados["usuario"]["rua"],
+        self.assertRegex(
+            dados["usuario"]["rua"], r"^802\.\d{3,}$",
         )
 
     # =========================================================
@@ -249,8 +249,8 @@ class Modulo1UsuariosTests(TestCase):
             Usuario.Tipo.MOTORISTA,
         )
 
-        self.assertIsNone(
-            dados["usuario"]["rua"],
+        self.assertRegex(
+            dados["usuario"]["rua"], r"^802\.\d{3,}$",
         )
 
     # =========================================================

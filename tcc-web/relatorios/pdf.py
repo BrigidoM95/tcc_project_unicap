@@ -85,7 +85,7 @@ def gerar_pdf(relatorio):
     elementos.extend([CondPageBreak(100), par("Frequência por associado", "Heading2")])
     elementos.append(par("Nome e RUA do último embarque no período. Dias de uso contam cada data uma única vez. Ausência de registro não determina falta.", "Nota"))
     tabela(["Associado", "RUA", "Embarques", "Dias de uso", "Primeira presença", "Última presença"],
-           ([f["nome"], f["rua"], f["embarques"], f["dias"], data(f["primeira_presenca"]), data(f["ultima_presenca"])] for f in relatorio.frequencia),
+           ([f["nome"] + "\n" + (f["instituicao"] or "Instituição não informada"), f["rua"], f["embarques"], f["dias"], data(f["primeira_presenca"]), data(f["ultima_presenca"])] for f in relatorio.frequencia),
            [3, 1.3, 1, 1, 1.8, 1.8])
 
     elementos.extend([CondPageBreak(100), par("Ocupação e vagas por viagem", "Heading2")])
@@ -96,22 +96,13 @@ def gerar_pdf(relatorio):
              f"{v['ocupacao']:.1f}%" if v["ocupacao"] is not None else "-"] for v in relatorio.preparar_viagens(relatorio.viagens)),
            [1.7, 3.2, 1.5, .9, 1.2, .8, 1])
 
-    elementos.extend([CondPageBreak(100), par("Utilização por ônibus", "Heading2")])
-    tabela(["Ônibus / placa", "Embarques", "Associados distintos", "Viagens com embarque"],
-           ([f"{v['codigo']} / {v['placa']}", v["embarques"], v["associados"], v["viagens"]] for v in relatorio.por_onibus), [3, 1, 1.5, 1.5])
-
-    elementos.extend([CondPageBreak(100), par("Pontos informados nos embarques", "Heading2")])
-    elementos.append(par(f"Ponto informado pelo fiscal ao gerar o código. {r['sem_ponto']} embarque(s) sem ponto informado.", "Nota"))
-    tabela(["Ponto", "Rota / sentido", "Embarques"],
-           ([p["nome"] or "Não informado", f"{p['ponto__rota__nome'] or '-'} / {p['ponto__sentido'] or '-'}", p["total"]] for p in relatorio.por_ponto), [3, 3, 1])
-
     elementos.extend([CondPageBreak(100), par("Embarques por dia", "Heading2")])
     tabela(["Data", "Embarques"], ([p["dia"].strftime("%d/%m/%Y"), p["total"]] for p in relatorio.por_dia), [1, 1])
 
     elementos.extend([CondPageBreak(100), par("Registros de embarque", "Heading2")])
     tabela(["Data / hora", "Associado / RUA", "Ônibus / placa", "Viagem / rota", "Sentido", "Ponto informado"],
-           ([data(c.registrado_em), f"{c.nome_associado}\n{c.rua_associado}", f"{c.codigo_onibus}\n{c.placa_onibus}",
-             f"#{c.viagem_id}\n{c.viagem.nome_rota_historico}", c.viagem.get_sentido_display(), c.nome_ponto or "Não informado"] for c in relatorio.registros),
+           ([data(c.ocorrido_em), f"{c.nome_associado}\n{c.rua_associado}", f"{c.codigo_onibus}\n{c.placa_onibus}",
+             f"#{c.viagem_id}\n{c.viagem.nome_rota_historico}", c.get_sentido_display(), c.ponto_informado] for c in relatorio.registros),
            [1.4, 2.5, 1.4, 2, 1, 1.8])
     doc.build(elementos, onFirstPage=pagina, onLaterPages=pagina)
     return saida.getvalue()

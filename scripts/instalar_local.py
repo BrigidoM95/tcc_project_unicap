@@ -7,7 +7,7 @@ import venv
 
 RAIZ = Path(__file__).resolve().parents[1]
 WEB = RAIZ / 'tcc-web'
-AMBIENTE = RAIZ / '.venv'
+AMBIENTE = WEB / 'venv' if (WEB / 'venv').is_dir() else RAIZ / '.venv'
 PYTHON = AMBIENTE / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
 
 

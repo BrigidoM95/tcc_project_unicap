@@ -1,94 +1,57 @@
-# UNICAP — sistema integrado de transporte universitário
-Entrega consolidada de 12/10/2026 · Alfredo Sanabria e Brigido Mathias
+# UNICAP — versão 4 com correções de 26/10/2026
 
-Este pacote reúne o código dos cinco módulos, o painel Django, a API REST e o aplicativo Flutter. Ele substitui o pacote parcial do Módulo 5: não é necessário aplicar os dois. O banco real, as fotos cadastradas e suas senhas não acompanham esta distribuição. Preserve os arquivos do seu projeto anterior conforme a atualização abaixo.
+Atualização de 18/10/2026, baseada nos documentos funcionais, nos mockups dos três perfis e nos Prompts de Implementação v4 de 17/10/2026.
 
-## 1. Abrir no Windows
+As correções solicitadas em 26/10 estão descritas em [CORRECOES_2026-10-26.md](docs/CORRECOES_2026-10-26.md), com arquivos alterados e testes manuais por item. Elas não exigem novas migrações. Reinicie o backend e o aplicativo para carregar a versão atualizada.
 
-Pré-requisitos: Python 3.12 ou superior, Flutter 3.38.1 (versão usada nesta validação) e Chrome. Use uma pasta local, por exemplo `C:\UNICAP\tcc_project_unicap`, fora do OneDrive. Não execute os arquivos dentro do ZIP.
+## Situação da atualização
 
-1. Extraia o pacote.
-2. Se já tem dados, siga a seção 3 **antes** de instalar.
-3. Execute `INSTALAR_WINDOWS.cmd`. O instalador cria `.venv`, instala dependências, configura `.env`, faz backup de um SQLite existente e aplica as migrations. Não é necessário ativar o ambiente virtual nem mudar a política do PowerShell.
-4. Crie o acesso usando uma das opções abaixo.
-5. Abra `INICIAR_WEB_WINDOWS.cmd` e mantenha a janela aberta.
-6. Abra `INICIAR_APP_WINDOWS.cmd` em outra janela.
+Código, testes e compilação web atualizados. **As cinco migrações v4 foram aplicadas ao PostgreSQL real em 18/10/2026, após autorização.** Não há migrações pendentes. Os estáticos foram atualizados e onze páginas foram conferidas com a base real, em transação somente de leitura.
 
-Painel administrativo: http://127.0.0.1:8000/ . Aplicativo: http://localhost:8080/ . O aplicativo usa **e-mail e senha**. O RUA continua sendo o identificador do associado, e não o login desta versão.
+A cópia final `backups/v4/aplicacao-real/depois-v4-verificado.sqlite3` foi comparada com as 29 tabelas Django da base real, incluindo os horários. O utilitário de backup recebeu uma correção; os detalhes e o reparo comprovado pela auditoria estão em `docs/VALIDACAO.md`.
 
-### Banco novo: dados fictícios para apresentação
+Os backups desta revisão estão em `backups/v4/`. A lista de mudanças e migrações está em [ALTERACOES_V4.md](docs/ALTERACOES_V4.md); os resultados, em [VALIDACAO.md](docs/VALIDACAO.md).
 
-No PowerShell, na raiz do projeto:
+## Iniciar o projeto
 
-```powershell
-.\.venv\Scripts\python.exe tcc-web\manage.py criar_demonstracao
-```
+1. Abra `INICIAR_WEB_WINDOWS.cmd` e mantenha a janela aberta. O processo de geração e encerramento de viagens acompanha o backend.
+2. Abra `INICIAR_APP_WINDOWS.cmd` em outra janela.
+3. Acesse o painel em <http://127.0.0.1:8000/> e o aplicativo em <http://localhost:8080/>.
+4. Complete as pendências indicadas na visão geral usando as informações corretas da associação.
 
-Informe uma senha forte quando solicitado. Serão criados quatro acessos que usam a senha escolhida:
+Neste computador o ambiente Python é `.venv`. Os iniciadores também reconhecem `tcc-web/venv` quando disponível em outras instalações.
 
-| Perfil | E-mail |
-|---|---|
-| Administrador | administrador@demo.unicap |
-| Motorista | motorista@demo.unicap |
-| Fiscal | fiscal@demo.unicap |
-| Associado | associado@demo.unicap |
+O aplicativo aceita e-mail ou RUA e senha, exigidos a cada nova sessão. O RUA persistente tem formato `802.NNN`; identificadores anteriores continuam reconhecidos. A senha inicial gerada no cadastro continua disponível. Para redefinir a senha, o administrador abre Usuários → Redefinir senha, informa uma senha de pelo menos oito caracteres e a confirma. O aplicativo oferece apenas Sair no menu da conta; não permite alterar senhas.
 
-O comando cria ônibus, rota, pontos e despesa fictícios. Ele só funciona em banco vazio com `DEBUG=true`; não modifica cadastros existentes. Não gera embarques nem localização simulada automaticamente. Use janelas ou perfis separados do navegador para testar os três papéis ao mesmo tempo.
+## Preparar os cadastros
 
-### Banco novo: começar com cadastros reais
+Cadastre instituições, cursos e pontos; em seguida, usuários, motorista, ônibus e rota. Todas as instituições ativas aparecem no cadastro de usuário, mesmo quando ainda não têm cursos. Nesse caso, o formulário informa a ausência e mostra o caminho para cadastrar um curso. Para vincular um associado, selecione uma instituição e um curso dela.
 
-Em vez da demonstração:
+Na rota, informe destino, dias, horários, instituições atendidas, fiscal e pontos em ordem para ida e volta. Motorista e fiscal acessam somente as viagens vinculadas a eles. Vínculos de viagens agendadas acompanham o painel; durante a operação, use a intervenção administrativa. Os pontos têm nome/endereço e não exigem coordenadas. O GPS é obtido do motorista durante a operação. A capacidade máxima permanece em 46 lugares.
+
+## Fluxo diário
+
+1. O serviço gera uma viagem por rota e dia operacional, com ida e volta no mesmo ciclo.
+2. A escolha abre às **08:00 no fuso America/Campo_Grande**, ou antes se o motorista já iniciou a rota. Esse horário pode ser configurado por `RESERVA_ABRE_AS`.
+3. O associado escolhe **Só ida**, **Só volta** ou **Ida e volta**, os pontos de cada sentido e a poltrona. Quando existe apenas um ponto, ele é selecionado automaticamente. Ida e volta usam a mesma poltrona, que precisa estar livre nos dois sentidos.
+4. A escolha permanece salva, sem expiração após cinco minutos. Seu limite é a virada operacional das 03:00, mas o início de cada viagem fecha a escolha e o check-in daquele sentido. Escolher uma poltrona não confirma presença.
+5. Após o motorista abrir o embarque e o fiscal assumir, o associado lê o QR Code diário. A resposta do servidor confirma o check-in. Sem internet, a leitura aparece como pendente até ser sincronizada.
+6. O fiscal acompanha a lista, registra exceções manualmente com poltrona, ponto e motivo e, quando estudante, registra o próprio embarque com justificativa.
+7. **Iniciar viagem** fecha a ida. **Finalizar viagem** registra a chegada e abre o embarque da volta. O motorista pode **Iniciar caminho de volta** após a chegada, inclusive antes do horário previsto. A última finalização encerra o ciclo e o GPS.
+8. Quem escolheu **Ida e volta** precisa confirmar a ida para manter o direito à volta dessa escolha. **Só volta** dispensa embarque anterior na ida.
+
+O servidor garante exclusividade da poltrona, uma reserva de ida e uma de volta por pessoa/dia, e no máximo um check-in válido por sentido. Para trocar de ônibus, cancele a escolha anterior ou remova dela o sentido desejado. Ida no ônibus A e volta no B são permitidas; ida e volta no A bloqueiam ambos os sentidos no B. Após o check-in, o sentido confirmado fica bloqueado. Cancelamentos preservam histórico e justificativa. Leituras offline usam o instante da leitura e continuam sujeitas à validação da janela e da ocupação.
+
+Mantenha o processo de operação em execução. Ele encerra viagens esquecidas após as 03:00 com indicação de revisão.
+
+## Instalação nova
+
+Requer Python 3.12 ou superior e Flutter com os SDKs de destino. Execute `INSTALAR_WINDOWS.cmd` e consulte [IMPLANTACAO.md](docs/IMPLANTACAO.md). Em base vazia, crie o primeiro administrador:
 
 ```powershell
 .\.venv\Scripts\python.exe tcc-web\manage.py createsuperuser
 ```
 
-Esse usuário acessa o painel web. Cadastre instituições e cursos em Gestão; depois usuários, motorista, ônibus, rota e pontos. Para novos associados, o cadastro cria a matrícula do ano atual. A tela informa os dados de acesso quando uma senha temporária é gerada. O associado pode alterar sua senha no aplicativo.
+Para uma base separada de demonstração, com `DEBUG=true`, use `criar_demonstracao`. O comando solicita uma senha e recusa bases com usuários. Não o execute na base usada pela associação.
 
-## 2. Conferência do fluxo principal
-
-1. Motorista entra no aplicativo e inicia a **ida** de sua rota. Autoriza localização e mantém o painel aberto.
-2. Fiscal entra, abre **Gerenciar embarque**, escolhe a viagem e o ponto de embarque. A tela gera QR Code e código manual.
-3. Associado entra, toca em **Fazer check-in** e lê o QR ou informa o código manual. O servidor confirma identidade, matrícula do ano, viagem, duplicidade e capacidade.
-4. Fiscal confere a lista de presentes e vagas. Associado consulta **Meus embarques** e **Acompanhar viagens**.
-5. Administrador abre **Mapa**, **Relatórios** e **Gestão**. Consulta período, frequência, ocupação e pontos; exporta os relatórios em PDF.
-6. Motorista finaliza a ida. Para a volta, inicia uma viagem de **retorno**; o fiscal gera outro código.
-
-Uma ida e uma volta são duas viagens e dois embarques válidos. A proteção impede duplicidade **na mesma viagem**. Falta de check-in não é contada automaticamente como falta escolar. Capacidade de assentos significa controle quantitativo de vagas; esta versão não reserva uma poltrona numerada.
-
-## 3. Atualizar o projeto anterior mantendo os dados
-
-1. Pare os servidores Django/Flutter. Faça uma cópia completa da pasta antiga em outro local.
-2. Extraia esta entrega em uma **nova pasta**, sem apagar o projeto anterior.
-3. Se o projeto anterior utiliza SQLite, copie somente `tcc-web\db.sqlite3` e a pasta `tcc-web\media` para os mesmos caminhos da pasta nova. Caso o SQLite esteja em outro caminho, configure `SQLITE_PATH` no `.env`.
-4. Preserve qualquer `.env` antigo em seu backup. Compare-o com `tcc-web\.env.example`: mantenha as credenciais e endereços reais, mas incorpore as novas opções. Não copie `settings.py`, ambientes virtuais, caches nem pastas de build antigas sobre esta entrega.
-5. Execute `INSTALAR_WINDOWS.cmd`. Ele também gera um backup de banco e fotos em `backups` antes das migrations. Leia as mensagens; se houver erro, interrompa a abertura do servidor até corrigi-lo.
-6. Use os acessos existentes. Não execute `criar_demonstracao` num banco com usuários.
-7. Confira usuários, ônibus, rotas, viagens, fotos e relatórios. Faça um embarque de teste identificado como teste.
-
-As migrations são incrementais, inclusive para quem já aplicou o Módulo 5. Os associados existentes recebem um registro inicial de matrícula do ano da migração, seguindo o estado ativo/inativo da conta. Revise a autorização de cada associado antes do uso real. Isso não reconstrói matrículas antigas.
-
-Viagens antigas sem capacidade registrada e embarques antigos sem ponto continuam identificados como dados não registrados. Não se inventa ocupação histórica. A base enviada originalmente tinha seis viagens e nenhum check-in; sem novas presenças, os relatórios de embarque ficam vazios.
-
-Para voltar à versão anterior, pare a nova aplicação e restaure **juntos** o código, o banco e as fotos da cópia anterior. Não substitua só o código depois de migrar o banco.
-
-## 4. Código incluído
-
-| Módulo | Entrega |
-|---|---|
-| 1 — Usuários | Perfis e permissões, cadastro/edição, inativação, RUA, telefone, instituições/cursos, matrículas anuais, troca de senha e sessão JWT. |
-| 2 — Ônibus | Cadastro/edição, capacidade, foto, motorista, estado do veículo e integração com o aplicativo. |
-| 3 — Rotas | Rotas, pontos, ida/retorno, início/fim de viagem, envio de GPS e mapa no painel/aplicativo. |
-| 4 — Embarque | QR e código manual, ponto informado pelo fiscal, validação do associado e matrícula, duplicidade, lotação, painel fiscal e histórico. |
-| 5 — Relatórios | Frequência, embarques, ocupação/vagas, utilização por ônibus, pontos, filtros, gráficos e PDF. |
-| Gestão complementar | Despesas dos veículos e PDF, cancelamento com histórico, auditoria, banco PostgreSQL configurável e backups. |
-
-A captura de capacidade no início da viagem preserva a comparação histórica. Inativar cadastros preserva os vínculos com viagens/embarques. O GPS é mostrado apenas para usuários autenticados com perfil permitido.
-
-## 5. Validação e limites de entrega
-
-Veja `docs/VALIDACAO.md` para os resultados verificados e o roteiro de homologação. Veja `docs/IMPLANTACAO.md` para PostgreSQL, domínio, HTTPS, backup e Android/iOS. Veja `docs/ATUALIZACAO_TCC.md` para alinhar a descrição acadêmica ao comportamento implementado.
-
-O código está integrado. A entrega não representa hospedagem já contratada/ativada, aplicativo publicado em loja ou homologação de GPS/câmera em aparelhos físicos. Requisitos de 500 usuários simultâneos, 2 segundos de check-in, 99% de disponibilidade e precisão de GPS de 10 m precisam ser medidos no ambiente real.
-
-Financeiro de mensalidades, pagamentos e integração com carteirinhas externas permanecem fora desta implementação, conforme o planejamento que os tratava como etapa futura. O cadastro de despesas refere-se aos veículos. Para bloquear o embarque de um associado, use sua situação de cadastro/matrícula; não existe conciliação automática de pagamentos.
+Veja as [prévias mobile](docs/previas-mobile/index.html), os [resultados dos testes](docs/VALIDACAO.md) e o [alinhamento do TCC](docs/ATUALIZACAO_TCC.md). Para reverter uma atualização, restaure código, banco e fotos compatíveis entre si.

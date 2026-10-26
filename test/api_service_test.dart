@@ -124,7 +124,7 @@ void main() {
       ApiService.embarques(
         'checkin/',
         'access-1',
-        corpo: {'codigo': 'UNIBUS-ABC234'},
+        corpo: {'codigo': 'UNICAP:V3:QR-assinado'},
       ),
       throwsA(isA<http.ClientException>()),
     );
@@ -153,7 +153,8 @@ void main() {
   test('resposta de login anterior não invade uma nova sessão', () async {
     ApiService.usarClienteTeste(
       MockClient((r) async {
-        final id = jsonDecode(r.body)['email'] == 'primeiro@example.test'
+        final id =
+            jsonDecode(r.body)['identificador'] == 'primeiro@example.test'
             ? '1'
             : '2';
         if (id == '1') {
@@ -162,12 +163,15 @@ void main() {
         return resposta(sessao(id));
       }),
     );
-    final primeiro = ApiService.login('primeiro@example.test', 'Senha!81234');
+    final primeiro = expectLater(
+      ApiService.login('primeiro@example.test', 'Senha!81234'),
+      throwsA(isA<ApiException>()),
+    );
     final segundo = await ApiService.login(
       'segundo@example.test',
       'Senha!81234',
     );
     expect(segundo!['access'], 'access-2');
-    expect(await primeiro, isNull);
+    await primeiro;
   });
 }

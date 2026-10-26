@@ -3,13 +3,8 @@ from django.urls import path
 from . import views
 from .mapa import mapa, MapaApi, DetalheMapaApi
 
-from .api import (
-    PainelMotoristaApi,
-    IniciarViagemApi,
-    FinalizarViagemApi,
-    EnviarLocalizacaoApi,
-
-)
+from .api_v3 import (HojeApi as PainelMotoristaApi, LegadoDesativadoApi as IniciarViagemApi,
+    LegadoDesativadoApi as FinalizarViagemApi, LegadoDesativadoApi as EnviarLocalizacaoApi)
 
 
 urlpatterns = [

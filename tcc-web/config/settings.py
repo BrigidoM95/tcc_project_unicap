@@ -12,7 +12,7 @@ def flag(nome, padrao=False):
     return os.getenv(nome, str(padrao)).lower() in ('1', 'true', 'yes', 'sim')
 def lista(nome, padrao=''):
     return [x.strip() for x in os.getenv(nome, padrao).split(',') if x.strip()]
-DEBUG = flag('DJANGO_DEBUG', True)
+DEBUG = flag('DJANGO_DEBUG', False)
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
 if not SECRET_KEY:
     if not DEBUG:
@@ -98,5 +98,12 @@ CACHES = {'default': {'BACKEND':'django.core.cache.backends.db.DatabaseCache', '
 MAP_TILE_URL = os.getenv('MAP_TILE_URL','https://tile.openstreetmap.org/{z}/{x}/{y}.png')
 MAP_ATTRIBUTION = os.getenv('MAP_ATTRIBUTION','© OpenStreetMap contributors')
 MAP_ATTRIBUTION_URL = os.getenv('MAP_ATTRIBUTION_URL','https://www.openstreetmap.org/copyright')
-# Matrículas de anos anteriores não autorizam novos embarques.
-EXIGIR_MATRICULA_ANUAL = flag('EXIGIR_MATRICULA_ANUAL', True)
+RESERVA_ABRE_AS = os.getenv('RESERVA_ABRE_AS', '08:00')
+try:
+    from datetime import time as _time
+    RESERVA_ABRE_AS = _time.fromisoformat(RESERVA_ABRE_AS).strftime('%H:%M')
+except ValueError as exc:
+    raise ImproperlyConfigured('RESERVA_ABRE_AS deve ser um horário como 08:00.') from exc
+SESSION_COOKIE_AGE = 1800
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True

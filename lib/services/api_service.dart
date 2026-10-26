@@ -1,18 +1,71 @@
 import 'dart:convert';
 import 'dart:async';
+import 'armazenamento.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
   final String mensagem;
-  ApiException(this.mensagem);
+  final int? status;
+  ApiException(this.mensagem, {this.status});
   @override
   String toString() => mensagem;
 }
 
 class ApiService {
+  static Map<String, dynamic>? _usuario;
+  static bool falhaTemporaria(Object e) =>
+      e is TimeoutException ||
+      e is http.ClientException ||
+      (e is ApiException && (e.status ?? 0) >= 500);
+  static Future<Map<String, dynamic>> requisicao(
+    String caminho,
+    String token, {
+    Map<String, dynamic>? corpo,
+    bool delete = false,
+    bool cache = false,
+  }) async {
+    final dono = _usuario?['id'];
+    final chave = 'consulta.$dono.$caminho';
+    try {
+      final dados = _lerMapa(
+        await _autenticada(
+          caminho,
+          token,
+          corpo: corpo,
+          post: corpo != null,
+          delete: delete,
+        ),
+      );
+      avisosCache.remove(caminho);
+      if (cache) {
+        await Armazenamento.salvar(chave, {
+          'dados': dados,
+          'quando': DateTime.now().toUtc().toIso8601String(),
+        });
+      }
+      return dados;
+    } catch (e) {
+      if (cache && falhaTemporaria(e)) {
+        final salvo = await Armazenamento.ler(chave);
+        final quando = DateTime.tryParse('${salvo?['quando']}');
+        if (quando != null &&
+            DateTime.now().difference(quando) < const Duration(hours: 24)) {
+          avisosCache[caminho] = quando;
+          return Map<String, dynamic>.from(salvo['dados'] as Map);
+        }
+      }
+      rethrow;
+    }
+  }
+
   static String mensagemErro(Object erro) {
+    if (erro is PlatformException) {
+      return erro.message ??
+          'Recurso do aparelho indisponível. Confira as permissões e tente novamente.';
+    }
     if (erro is TimeoutException) {
       return 'O servidor demorou para responder. Confira sua conexão e tente novamente.';
     }
@@ -39,6 +92,7 @@ class ApiService {
   @visibleForTesting
   static void usarClienteTeste(http.Client client) {
     _client = client;
+    Armazenamento.emMemoria = true;
   }
 
   static final Map<String, ({dynamic dados, DateTime quando})> _cache = {};
@@ -72,6 +126,7 @@ class ApiService {
   static Future<void> sair() async {
     final access = _access, refresh = _refresh;
     encerrarSessao();
+    await Armazenamento.apagar('sessao');
     if (access == null || refresh == null) return;
     try {
       await _client
@@ -94,6 +149,7 @@ class ApiService {
     _cache.clear();
     avisosCache.clear();
     _access = null;
+    _usuario = null;
     _refresh = null;
     _tokenDoLogin = null;
     _renovacao = null;
@@ -123,7 +179,7 @@ class ApiService {
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(_mensagemResposta(dados));
+      throw ApiException(_mensagemResposta(dados), status: response.statusCode);
     }
 
     return dados;
@@ -150,13 +206,15 @@ class ApiService {
           .post(
             Uri.parse('${baseUrl}api/login/'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'senha': senha}),
+            body: jsonEncode({'identificador': email, 'senha': senha}),
           )
           .timeout(_timeout);
 
       _conferirSessao(versao);
 
-      if (response.statusCode != 200) return null;
+      if (response.statusCode != 200) {
+        _lerResposta(response);
+      }
 
       final dados = _lerMapa(response);
       final access = dados['access'];
@@ -173,10 +231,10 @@ class ApiService {
       _access = access;
       _refresh = refresh;
       _tokenDoLogin = access;
-
+      _usuario = Map<String, dynamic>.from(dados['usuario'] as Map);
       return dados;
     } catch (_) {
-      return null;
+      rethrow;
     }
   }
 
@@ -248,6 +306,7 @@ class ApiService {
     String tokenDaTela, {
     Map<String, dynamic>? corpo,
     bool post = false,
+    bool delete = false,
   }) async {
     final versao = _versaoSessao;
     final tokenInicial = _access;
@@ -266,6 +325,11 @@ class ApiService {
         'Content-Type': 'application/json',
       };
 
+      if (delete) {
+        return _client
+            .delete(uri, headers: headers, body: jsonEncode(corpo ?? {}))
+            .timeout(_timeout);
+      }
       if (post) {
         return _client
             .post(
@@ -455,19 +519,4 @@ class ApiService {
       Map<String, dynamic>.from(
         await _consulta('api/mapa/viagens/$id/', token),
       );
-  static Future<void> alterarSenha(
-    String atual,
-    String nova,
-    String token,
-  ) async {
-    _lerMapa(
-      await _autenticada(
-        'api/senha/',
-        token,
-        post: true,
-        corpo: {'senha_atual': atual, 'nova_senha': nova},
-      ),
-    );
-    encerrarSessao();
-  }
 }

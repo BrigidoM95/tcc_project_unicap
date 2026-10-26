@@ -3,6 +3,7 @@ from . import views
 app_name='gestao'
 urlpatterns=[
  path('',views.painel,name='painel'),
+ path('<str:tipo>/<int:pk>/status/',views.alterar_status,name='status'),
  path('auditoria/',views.auditoria,name='auditoria'),
  path('despesas/pdf/',views.despesas_pdf,name='despesas_pdf'),
  path('despesas/<int:pk>/cancelar/',views.cancelar_despesa,name='cancelar_despesa'),

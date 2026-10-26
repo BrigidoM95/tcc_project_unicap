@@ -128,10 +128,7 @@ class _MapaViagensState extends State<MapaViagens> with WidgetsBindingObserver {
 
   void _enquadrar() {
     if (!_pronto) return;
-    final pts = _pontos
-        .where((p) => p['latitude'] != null && p['longitude'] != null)
-        .map(_coord)
-        .toList();
+    final pts = <LatLng>[];
     if (_local != null) pts.add(_coord(_local!));
     pts.addAll(_trajeto);
     if (pts.isEmpty) return;
@@ -147,23 +144,9 @@ class _MapaViagensState extends State<MapaViagens> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final loc = _local,
-        pontos = _pontos
-            .where((p) => p['latitude'] != null && p['longitude'] != null)
-            .toList();
+    final loc = _local;
     final conf = _dados?['mapa'] as Map?;
     final linhas = <Polyline>[];
-    for (final sentido in ['ida', 'retorno']) {
-      final pts = pontos
-          .where((p) => p['sentido'] == sentido)
-          .map(_coord)
-          .toList();
-      if (pts.length > 1) {
-        linhas.add(
-          Polyline(points: pts, color: const Color(0xFF2B5E97), strokeWidth: 2),
-        );
-      }
-    }
     if (_trajeto.length > 1) {
       linhas.add(
         Polyline(
@@ -287,22 +270,6 @@ class _MapaViagensState extends State<MapaViagens> with WidgetsBindingObserver {
                 PolylineLayer(polylines: linhas),
                 MarkerLayer(
                   markers: [
-                    ...pontos.map(
-                      (p) => Marker(
-                        point: _coord(p),
-                        width: 38,
-                        height: 38,
-                        child: Tooltip(
-                          message:
-                              '${p['ordem']}. ${p['nome']} (${p['sentido']})',
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Color(0xFF1C3B6E),
-                            size: 32,
-                          ),
-                        ),
-                      ),
-                    ),
                     if (loc != null)
                       Marker(
                         point: _coord(loc),
@@ -342,12 +309,30 @@ class _MapaViagensState extends State<MapaViagens> with WidgetsBindingObserver {
               ],
             ),
           ),
+          if (_pontos.isNotEmpty)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 100),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _pontos
+                      .map(
+                        (p) => Text(
+                          "${p['ordem']}. ${p['nome']} • ${p['sentido'] == 'ida' ? 'Ida' : 'Volta'}",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
           const SafeArea(
             top: false,
             child: Padding(
               padding: EdgeInsets.all(10),
               child: Text(
-                'Atualiza a cada 10 s. Azul: pontos cadastrados (referência, não navegação). Laranja: GPS recente.',
+                'Atualiza a cada 10 s. Laranja: posição e trajeto do ônibus.',
                 style: TextStyle(fontSize: 12),
               ),
             ),

@@ -15,7 +15,7 @@ val releaseSolicitado = gradle.startParameter.taskNames.any { it.contains("relea
 if (releaseSolicitado && !arquivoAssinatura.exists()) throw GradleException("Configure android/key.properties para assinar a versão de produção.")
 
 android {
-    namespace = "com.example.aulas_flutter"
+    namespace = "br.org.unicap.transporte"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +30,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.aulas_flutter"
+        applicationId = "br.org.unicap.transporte"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

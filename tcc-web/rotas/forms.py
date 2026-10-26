@@ -4,17 +4,22 @@ from django.db.models import Q
 from onibus.models import Onibus
 from usuarios.models import Usuario
 
-from .models import Rota, PontoEmbarque
+from .models import Rota, PontoEmbarque, Ponto
 
 
 class RotaForm(forms.ModelForm):
+    pontos_ida = forms.ModelMultipleChoiceField(queryset=Ponto.objects.filter(ativo=True), label='Pontos de embarque (ida)', widget=forms.CheckboxSelectMultiple)
+    pontos_retorno = forms.ModelMultipleChoiceField(queryset=Ponto.objects.filter(ativo=True), label='Pontos de desembarque / embarque da volta', widget=forms.CheckboxSelectMultiple)
+    dias_operacao = forms.MultipleChoiceField(choices=[(str(i), n) for i,n in enumerate(['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'])], widget=forms.CheckboxSelectMultiple)
     class Meta:
         model = Rota
         fields = [
             "nome",
-            "origem",
             "destino",
             "onibus",
+            "fiscal",
+            "instituicoes",
+            "dias_operacao",
             "horario_ida",
             "horario_retorno",
             "observacoes",
@@ -22,9 +27,6 @@ class RotaForm(forms.ModelForm):
         widgets = {
             "nome": forms.TextInput(
                 attrs={"placeholder": "Ex.: UNIGRAN — Noturno"}
-            ),
-            "origem": forms.TextInput(
-                attrs={"placeholder": "Ex.: Caarapó"}
             ),
             "destino": forms.TextInput(
                 attrs={"placeholder": "Ex.: UNIGRAN — Dourados"}
@@ -44,6 +46,15 @@ class RotaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['fiscal'].queryset = Usuario.objects.filter(tipo='fiscal',user__is_active=True).select_related('user')
+        self.fields['instituicoes'].queryset = self.fields['instituicoes'].queryset.filter(ativa=True)
+        self.fields['instituicoes'].required = True
+        if self.instance.pk:
+            for sentido, nome in [('ida','pontos_ida'),('retorno','pontos_retorno')]:
+                self.initial[nome] = list(self.instance.pontos.filter(sentido=sentido,ativo=True).values_list('ponto_id',flat=True))
+            self.initial['dias_operacao'] = [str(i) for i in self.instance.dias_operacao or range(7)]
+        else:
+            self.initial['dias_operacao'] = ['0','1','2','3','4']
 
         disponiveis = Q(
             status=Onibus.Status.ATIVO,
@@ -74,85 +85,51 @@ class RotaForm(forms.ModelForm):
         for campo in self.fields.values():
             campo.widget.attrs["class"] = "campo-formulario"
 
-class PontoEmbarqueForm(forms.ModelForm):
-
-    class Meta:
-        model = PontoEmbarque
-
-        fields = [
-            "nome",
-            "endereco",
-            "sentido",
-            "ordem",
-            "latitude",
-            "longitude",
-        ]
-
-        widgets = {
-            "nome": forms.TextInput(
-                attrs={"placeholder": "Ex.: Praça central"}
-            ),
-            "endereco": forms.TextInput(
-                attrs={"placeholder": "Rua, número ou referência"}
-            ),
-            "ordem": forms.NumberInput(
-                attrs={"min": "1"}
-            ),
-            "latitude": forms.NumberInput(
-                attrs={
-                    "step": "0.000001",
-                    "min": "-90",
-                    "max": "90",
-                }
-            ),
-            "longitude": forms.NumberInput(
-                attrs={
-                    "step": "0.000001",
-                    "min": "-180",
-                    "max": "180",
-                }
-            ),
-        }
-
-    def __init__(self, *args, rota, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.instance.rota = rota
-
-        self.fields["ordem"].help_text = (
-            "Sequência neste sentido: 1, 2, 3..."
-        )
-
-        self.fields["latitude"].help_text = (
-            "Opcional. Preencha latitude e longitude juntas."
-        )
-
-        for campo in self.fields.values():
-            campo.widget.attrs["class"] = "campo-formulario"
+    def clean_dias_operacao(self):
+        return [int(x) for x in self.cleaned_data['dias_operacao']]
 
     def clean(self):
-        dados = super().clean()
+        d=super().clean()
+        if self.instance.pk and self.instance.viagens.filter(status='em_andamento').exists() and self.changed_data:
+            raise forms.ValidationError('Finalize a viagem antes de editar a rota. Para substituição, use Operação das viagens.')
+        return d
 
-        sentido = dados.get("sentido")
-        ordem = dados.get("ordem")
+    def save(self, commit=True):
+        from django.db import transaction
+        if not commit: return super().save(commit=False)
+        with transaction.atomic():
+            rota=super().save()
+            # Preserva os vínculos históricos; reativa os mesmos pontos quando possível.
+            for sentido,campo in [('ida','pontos_ida'),('retorno','pontos_retorno')]:
+                existentes=list(rota.pontos.filter(sentido=sentido).order_by('ordem'))
+                base=max((p.ordem for p in existentes),default=0)+1
+                for i,p in enumerate(existentes):
+                    p.ordem=base+i;p.ativo=False;p.save(update_fields=['ordem','ativo'])
+                selecionados=list(self.cleaned_data[campo])
+                ordem_anterior={x.ponto_id:i for i,x in enumerate(existentes)}
+                selecionados.sort(key=lambda p:ordem_anterior.get(p.pk,len(existentes)+p.pk))
+                for ordem,p in enumerate(selecionados,1):
+                    vinculo=next((x for x in existentes if x.ponto_id==p.pk),None)
+                    if vinculo is None: vinculo=PontoEmbarque(rota=rota,sentido=sentido,ponto=p)
+                    vinculo.nome=p.nome;vinculo.endereco=p.endereco
+                    vinculo.ordem=ordem;vinculo.ativo=True;vinculo.save()
+            return rota
 
-        if sentido and ordem is not None:
-            existentes = PontoEmbarque.objects.filter(
-                rota=self.instance.rota,
-                sentido=sentido,
-                ordem=ordem,
-            )
-
-            if self.instance.pk:
-                existentes = existentes.exclude(
-                    pk=self.instance.pk
-                )
-
-            if existentes.exists():
-                self.add_error(
-                    "ordem",
-                    "Já existe um ponto nessa posição "
-                    "para este sentido da rota.",
-                )
-
-        return dados
+class PontoEmbarqueForm(forms.ModelForm):
+    class Meta:
+        model=PontoEmbarque
+        fields=['ponto','sentido','ordem','ativo']
+    def __init__(self,*args,rota,**kwargs):
+        super().__init__(*args,**kwargs);self.instance.rota=rota
+        self.fields['ponto'].queryset=Ponto.objects.filter(ativo=True)
+        self.fields['ponto'].required=True
+        self.fields['ordem'].help_text='Sequência de visita neste sentido: 1, 2, 3…'
+    def clean(self):
+        d=super().clean()
+        if self.instance.rota.viagens.filter(status='em_andamento').exists():raise forms.ValidationError('Finalize a viagem antes de alterar seus pontos.')
+        if d.get('ordem') and d.get('sentido') and PontoEmbarque.objects.filter(rota=self.instance.rota,sentido=d['sentido'],ordem=d['ordem']).exclude(pk=self.instance.pk).exists():
+            self.add_error('ordem','Já existe um ponto nesta posição. Use uma posição livre para reordenar.')
+        p=d.get('ponto')
+        if p:
+            for f in ['nome','endereco']:setattr(self.instance,f,getattr(p,f))
+        return d

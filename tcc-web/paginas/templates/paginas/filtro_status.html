@@ -1,0 +1,5 @@
+<nav class="filtros filtro-status" aria-label="Filtrar por status">
+    <a href="{% querystring status='ativos' pagina=None %}" class="filtro {% if filtro_status == 'ativos' %}ativo{% endif %}"{% if filtro_status == 'ativos' %} aria-current="true"{% endif %}>Ativos</a>
+    <a href="{% querystring status='inativos' pagina=None %}" class="filtro {% if filtro_status == 'inativos' %}ativo{% endif %}"{% if filtro_status == 'inativos' %} aria-current="true"{% endif %}>Inativos</a>
+    <a href="{% querystring status='todos' pagina=None %}" class="filtro {% if filtro_status == 'todos' %}ativo{% endif %}"{% if filtro_status == 'todos' %} aria-current="true"{% endif %}>Todos</a>
+</nav>

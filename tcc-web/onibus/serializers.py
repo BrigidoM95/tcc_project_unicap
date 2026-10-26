@@ -12,11 +12,6 @@ class OnibusSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
-    motorista_email = serializers.EmailField(
-        source="motorista.user.email",
-        read_only=True,
-    )
-
     status_descricao = serializers.CharField(
         source="get_status_display",
         read_only=True,
@@ -33,11 +28,11 @@ class OnibusSerializer(serializers.ModelSerializer):
             "capacidade",
             "motorista",
             "motorista_nome",
-            "motorista_email",
+
             "foto",
             "status",
             "status_descricao",
-            "situacao",
+            
             "observacoes",
             "criado_em",
             "atualizado_em",
@@ -50,6 +45,18 @@ class OnibusSerializer(serializers.ModelSerializer):
             "criado_em",
             "atualizado_em",
         ]
+
+    def validate(self, attrs):
+        from copy import copy
+        from django.core.exceptions import ValidationError
+        candidato = copy(self.instance) if self.instance else Onibus()
+        for campo, valor in attrs.items():
+            setattr(candidato, campo, valor)
+        try:
+            candidato.full_clean(exclude=['foto'])
+        except ValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc,'message_dict') else {'detail':exc.messages})
+        return attrs
 
     def validate_motorista(self, motorista):
 

@@ -8,7 +8,7 @@
     <div class="acoes">
         <a class="botao"
            href="{% url 'cadastrar_ponto' rota.pk %}">
-            Cadastrar ponto
+            Vincular ponto
         </a>
         <a class="botao secundario" href="{% url 'listar_rotas' %}">
             Voltar para rotas
@@ -18,7 +18,7 @@
 
 <div class="cartao">
     <h2>{{ rota.nome }}</h2>
-    <p>{{ rota.origem }} → {{ rota.destino }}</p>
+    <p>{{ rota.destino }}</p>
     <p>As paradas de ida e retorno possuem sequências independentes.</p>
 </div>
 
@@ -30,7 +30,6 @@
                 <th>Ordem</th>
                 <th>Ponto</th>
                 <th>Endereço / referência</th>
-                <th>Coordenadas</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -42,13 +41,6 @@
                     <td>{{ ponto.nome }}</td>
                     <td>{{ ponto.endereco }}</td>
                     <td>
-                        {% if ponto.latitude != None and ponto.longitude != None %}
-                            {{ ponto.latitude }} / {{ ponto.longitude }}
-                        {% else %}
-                            Não informadas
-                        {% endif %}
-                    </td>
-                    <td>
                         <a class="botao secundario"
                            href="{% url 'editar_ponto' rota.pk ponto.pk %}">
                             Editar
@@ -57,7 +49,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6">
+                    <td colspan="5">
                         Esta rota ainda não possui pontos cadastrados.
                     </td>
                 </tr>

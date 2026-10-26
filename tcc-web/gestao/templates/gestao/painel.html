@@ -1,10 +1,6 @@
 {% extends 'paginas/base.html' %}{% block titulo %}Gestão{% endblock %}{% block conteudo %}
-<header class="cabecalho"><div><h1>Gestão da associação</h1><p class="subtitulo">Cadastros de apoio, renovação anual e controle administrativo.</p></div></header>
-<section class="resumos"><div class="resumo">Associados ativos<strong>{{ ativos }}</strong></div><div class="resumo">Associados inativos<strong>{{ inativos }}</strong></div><div class="resumo">Matrículas ativas em {{ ano }}<strong>{{ matriculas }}</strong></div></section>
-<section class="cartao"><h2>Situação dos associados</h2><p>Retrato atual dos cadastros, independente do período dos embarques.</p>
-<label for="ativos">Ativos — {{ ativos }}</label><meter id="ativos" min="0" max="{{ ativos|add:inativos|default:1 }}" value="{{ ativos }}" style="width:100%;height:30px"></meter>
-<label for="inativos">Inativos — {{ inativos }}</label><meter id="inativos" min="0" max="{{ ativos|add:inativos|default:1 }}" value="{{ inativos }}" style="width:100%;height:30px"></meter></section>
-<div class="modulos"><article class="modulo"><h2>Instituições e cursos</h2><p>Cadastre os cursos antes de vincular os associados.</p><div class="acoes"><a class="botao" href="{% url 'gestao:lista' 'instituicoes' %}">Instituições</a><a class="botao secundario" href="{% url 'gestao:lista' 'cursos' %}">Cursos</a></div></article>
-<article class="modulo"><h2>Matrículas anuais</h2><p>Renove cada associado para o ano de uso. Matrículas antigas permanecem no histórico; sem matrícula ativa no ano atual o check-in é bloqueado.</p><a class="botao" href="{% url 'gestao:lista' 'matriculas' %}">Ver matrículas</a></article>
-<article class="modulo"><h2>Despesas e veículos</h2><p>Registre gastos, consulte o estado dos veículos e exporte o relatório em PDF.</p><a class="botao" href="{% url 'gestao:lista' 'despesas' %}">Ver despesas</a></article>
-<article class="modulo"><h2>Auditoria</h2><p>Consulte acessos e operações críticas com data e responsável.</p><a class="botao" href="{% url 'gestao:auditoria' %}">Ver registros</a></article></div>{% endblock %}
+<header class="cabecalho"><div><h1>Gestão da associação</h1><p class="subtitulo">Cadastros de apoio e controle administrativo.</p></div></header>
+<div class="modulos"><article class="modulo"><h2>Instituições e cursos</h2><p>Cadastre instituições e cursos para vincular os estudantes.</p><div class="acoes"><a class="botao" href="{% url 'gestao:lista' 'instituicoes' %}">Instituições</a><a class="botao secundario" href="{% url 'gestao:lista' 'cursos' %}">Cursos</a></div></article>
+<article class="modulo"><h2>Despesas</h2><p>Registre gastos e exporte o relatório em PDF.</p><a class="botao" href="{% url 'gestao:lista' 'despesas' %}">Ver despesas</a></article>
+<article class="modulo"><h2>Pontos de embarque</h2><p>Gerencie os pontos disponíveis para vincular às rotas.</p><a class="botao" href="{% url 'gestao:lista' 'pontos' %}">Ver pontos de embarque</a></article>
+<article class="modulo"><h2>Auditoria</h2><p>Consulte acessos e operações com data e responsável.</p><a class="botao" href="{% url 'gestao:auditoria' %}">Ver registros</a></article></div>{% endblock %}

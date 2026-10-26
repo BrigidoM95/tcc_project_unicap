@@ -19,7 +19,7 @@ class Main extends StatelessWidget {
         color: const Color(0xFFE4EAF2),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 920),
+            constraints: const BoxConstraints(maxWidth: 480),
             child: child ?? const SizedBox.shrink(),
           ),
         ),

@@ -21,8 +21,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from django.views.decorators.http import require_POST
 from django.contrib.auth.signals import user_logged_in
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from gestao.auditoria import registrar
 
 class LimiteLogin(AnonRateThrottle):
@@ -40,6 +38,15 @@ class UsuarioLoginView(LoginView):
     authentication_form = LoginForm
     template_name = "usuarios/login.html"
     redirect_authenticated_user = True
+
+    def post(self, request, *args, **kwargs):
+        from .seguranca import limite_login_web
+        if limite_login_web(request):
+            form = self.get_form()
+            form.is_valid()
+            form.add_error(None, 'Muitas tentativas. Aguarde 15 minutos antes de tentar novamente.')
+            return self.form_invalid(form)
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         user = form.get_user()
@@ -77,11 +84,16 @@ def listar_usuarios(request):
         "user__first_name"
     )
 
-    return render(
-        request,
-        "usuarios/listar.html",
-        {"usuarios": usuarios},
-    )
+    from django.db.models import Q
+    from django.core.paginator import Paginator
+    q=request.GET.get('q','').strip(); tipo=request.GET.get('tipo',''); inativos=request.GET.get('status')=='inativos'
+    usuarios=usuarios.filter(user__is_active=not inativos)
+    if request.GET.get('pendencia')=='sem_curso': usuarios=usuarios.filter(tipo='associado',curso__isnull=True,user__is_active=True)
+    if q: usuarios=usuarios.filter(Q(user__first_name__icontains=q)|Q(user__email__icontains=q)|Q(rua__icontains=q))
+    if tipo in Usuario.Tipo.values: usuarios=usuarios.filter(tipo=tipo)
+    pagina=Paginator(usuarios,25).get_page(request.GET.get('pagina'))
+    parametros=request.GET.copy();parametros.pop('pagina',None)
+    return render(request, 'usuarios/listar.html', {'usuarios':pagina,'pagina':pagina,'busca':q,'tipo':tipo,'inativos':inativos,'tipos':Usuario.Tipo.choices,'parametros':parametros.urlencode()})
 
 @user_passes_test(eh_administrador, login_url="login")
 def cadastrar_usuario(request):
@@ -90,14 +102,8 @@ def cadastrar_usuario(request):
         form = CadastroUsuarioForm(request.POST, ator=request.user)
 
         if form.is_valid():
-            form.save()
-
-            messages.success(
-                request,
-                "Usuário cadastrado com sucesso."
-            )
-
-            return redirect("listar_usuarios")
+            user = form.save()
+            return render(request, 'usuarios/senha_acesso.html', {'usuario':user.perfil, 'senha':form.senha_gerada})
 
     else:
         form = CadastroUsuarioForm(ator=request.user)
@@ -158,8 +164,8 @@ def alterar_status_usuario(request, usuario_id):
         if user.pk == request.user.pk or user.is_superuser:
             messages.error(request, 'Esta conta não pode ser inativada por esta tela.')
             return redirect('listar_usuarios')
-        if usuario.tipo == Usuario.Tipo.MOTORISTA and usuario.viagens.filter(status='em_andamento').exists():
-            messages.error(request, 'Finalize a viagem antes de inativar o motorista.')
+        if usuario.tipo == Usuario.Tipo.MOTORISTA and user.is_active and (usuario.viagens.filter(status='em_andamento').exists() or usuario.onibus.filter(status='ativo').exists()):
+            messages.error(request, 'Desvincule o motorista dos ônibus ativos e finalize suas viagens antes de inativá-lo.')
             return redirect('listar_usuarios')
         user.is_active = not user.is_active
         user.save()
@@ -185,7 +191,11 @@ class LoginApiView(APIView):
     authentication_classes = []
 
     def post(self, request):
-        email = str(request.data.get("email", "")).strip().lower()
+        identificador = str(request.data.get('identificador', request.data.get('email', ''))).strip()
+        from django.contrib.auth import get_user_model
+        from django.db.models import Q
+        candidato = get_user_model().objects.filter(Q(email__iexact=identificador)|Q(perfil__rua__iexact=identificador)|Q(perfil__rua_anterior__iexact=identificador)).first() if identificador else None
+        email = candidato.username if candidato else identificador.lower()
         senha = request.data.get("senha")
 
         if not email or not isinstance(senha, str) or not senha:
@@ -202,10 +212,12 @@ class LoginApiView(APIView):
             password=senha,
         )
 
+        if user is None and candidato and candidato.check_password(senha) and not candidato.is_active:
+            return Response({'erro':'Conta inativa. Procure a administração.'}, status=403)
         if user is None:
             return Response(
                 {
-                    "erro": "E-mail ou senha inválidos."
+                    "erro": "E-mail, RUA ou senha inválidos."
                 },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
@@ -255,6 +267,10 @@ class LoginApiView(APIView):
                     "email": user.email,
                     "tipo": perfil.tipo,
                     "rua": perfil.rua,
+                    "perfil_id": perfil.pk,
+                    "estudante": perfil.curso_id is not None,
+                    "instituicao": perfil.curso.instituicao.nome if perfil.curso_id else None,
+                    "curso": perfil.curso.nome if perfil.curso_id else None,
                 },
             },
             status=status.HTTP_200_OK,
@@ -282,16 +298,7 @@ class AlterarSenhaApi(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [LimiteSenha]
     def post(self, request):
-        atual = request.data.get('senha_atual',''); nova = request.data.get('nova_senha','')
-        if not isinstance(atual,str) or not request.user.check_password(atual):
-            return Response({'detail':'Senha atual incorreta.'},status=400)
-        if not isinstance(nova,str) or not nova:
-            return Response({'detail':'Informe a nova senha.'},status=400)
-        try: validate_password(nova,user=request.user)
-        except ValidationError as e: return Response({'detail':list(e.messages)},status=400)
-        request.user.set_password(nova);request.user.save(update_fields=['password'])
-        # Impede que refresh tokens emitam novos acessos após troca de senha.
-        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-        for t in OutstandingToken.objects.filter(user=request.user): BlacklistedToken.objects.get_or_create(token=t)
-        registrar('senha_alterada',usuario=request.user)
-        return Response({'detail':'Senha alterada. Entre novamente.'})
+        return Response(
+            {'detail':'A troca de senha é feita pelo painel web. Procure a administração para redefinir sua senha.'},
+            status=status.HTTP_410_GONE,
+        )

@@ -24,6 +24,7 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: https://${UNICAP_DOMAIN}
       DJANGO_CORS_ORIGINS: https://${UNICAP_DOMAIN}
       DJANGO_BEHIND_PROXY: "true"
+      RESERVA_ABRE_AS: ${RESERVA_ABRE_AS:-08:00}
       DB_ENGINE: postgres
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -55,6 +56,15 @@ services:
       web:
         condition: service_healthy
     restart: unless-stopped
+  operacao:
+    extends:
+      service: web
+    entrypoint: ["python", "manage.py", "processar_operacao", "--continuo"]
+    healthcheck:
+      disable: true
+    depends_on:
+      web:
+        condition: service_healthy
   backup:
     image: postgres:17-alpine
     environment:

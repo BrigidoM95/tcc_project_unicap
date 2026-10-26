@@ -31,7 +31,7 @@ class RelatoriosTests(TestCase):
         cls.motorista = perfil("Motorista", "motorista")
         cls.onibus = Onibus.objects.create(nome="Azul", placa="ABC1234", capacidade=4,
                                            motorista=cls.motorista, foto="teste.jpg")
-        cls.rota = Rota.objects.create(nome="Universidade", origem="Caarapó", destino="Dourados", onibus=cls.onibus,
+        cls.rota = Rota.objects.create(nome="Universidade", destino="Dourados", onibus=cls.onibus,
                                        horario_ida="17:40", horario_retorno="22:10")
         cls.ponto = PontoEmbarque.objects.create(rota=cls.rota, nome="Praça Central", endereco="Centro", sentido="ida", ordem=1)
         cls.ponto_volta = PontoEmbarque.objects.create(rota=cls.rota, nome="Faculdade", endereco="Campus", sentido="retorno", ordem=1)
@@ -40,7 +40,7 @@ class RelatoriosTests(TestCase):
         for dia, hora, sentido in [(10, 17, "ida"), (10, 22, "retorno"), (11, 23, "retorno"), (11, 12, "ida")]:
             inicio = datetime(2026, 10, dia, hora, tzinfo=fuso_relatorios())
             cls.viagens.append(Viagem.objects.create(rota=cls.rota, onibus=cls.onibus, motorista=cls.motorista,
-                sentido=sentido, iniciada_em=inicio, finalizada_em=inicio+timedelta(minutes=45), status="finalizada"))
+                sentido=sentido, ciclo_completo=False, data_servico=inicio.date(), iniciada_em=inicio, finalizada_em=inicio+timedelta(minutes=45), status="finalizada"))
         for viagem, associado, ponto, nome in [
             (cls.viagens[0], cls.ana, cls.ponto, "Ana"),
             (cls.viagens[0], cls.beto, cls.ponto, "Beto"),
@@ -48,7 +48,7 @@ class RelatoriosTests(TestCase):
             (cls.viagens[2], cls.ana, None, "Ana Silva"),
         ]:
             c = CheckIn.objects.create(viagem=viagem, associado=associado, fiscal=cls.fiscal,
-                vaga=viagem.checkins.count()+1, nome_associado=nome, rua_associado=associado.rua,
+                sentido=viagem.sentido,data_servico=viagem.data_servico,vaga=viagem.checkins.count()+1, nome_associado=nome, rua_associado=associado.rua,
                 placa_onibus=cls.onibus.placa, codigo_onibus=cls.onibus.codigo,
                 ponto=ponto, nome_ponto=ponto.nome if ponto else "")
             CheckIn.objects.filter(pk=c.pk).update(registrado_em=viagem.iniciada_em+timedelta(minutes=30))
@@ -66,7 +66,7 @@ class RelatoriosTests(TestCase):
     def test_resumo_pessoas_e_embarques_separados(self):
         self.assertEqual(self.relatorio().resumo, {
             "embarques": 4, "associados": 2, "viagens_com_embarque": 3,
-            "onibus_utilizados": 1, "sem_ponto": 1,
+            "onibus_utilizados": 1,
         })
 
     def test_frequencia_agrupa_id_apesar_de_mudanca_de_nome(self):
@@ -84,6 +84,21 @@ class RelatoriosTests(TestCase):
     def test_grafico_dias_sem_registro_e_totais(self):
         dias = self.relatorio(data_inicial="2026-10-09").por_dia
         self.assertEqual([x["total"] for x in dias], [0, 3, 1])
+
+    def test_sincronizacao_tardia_usa_data_da_leitura(self):
+        leitura=datetime(2026,10,11,23,55,tzinfo=fuso_relatorios())
+        CheckIn.objects.filter(pk=self.ids[-1]).update(lido_em=leitura,registrado_em=leitura+timedelta(hours=6))
+        rel=self.relatorio(data_inicial='2026-10-11')
+        self.assertEqual(rel.resumo['embarques'],1)
+        self.assertEqual(rel.por_dia[0]['total'],1)
+        self.assertEqual(rel.frequencia[0]['ultima_presenca'],leitura)
+
+    def test_ocupacao_ciclo_completo_respeita_filtro_sentido(self):
+        Viagem.objects.filter(pk=self.viagens[0].pk).update(ciclo_completo=True)
+        rel=self.relatorio(sentido='ida')
+        linhas=rel.preparar_viagens(rel.viagens)
+        self.assertTrue(linhas)
+        self.assertTrue(all(x['sentido']=='Ida' for x in linhas))
 
     def test_ocupacao_nao_encolhe_ao_filtrar_associado(self):
         rel = self.relatorio(associado=self.ana.pk, sentido="ida")
@@ -112,14 +127,55 @@ class RelatoriosTests(TestCase):
                             sentido="ida", ponto=self.ponto.pk)
         self.assertEqual(rel.resumo["embarques"], 1)
 
-    def test_sem_ponto_e_pontos_agregados(self):
+    def test_filtro_sem_ponto(self):
         self.assertEqual(self.relatorio(sem_ponto="on").resumo["embarques"], 1)
-        self.assertEqual(sum(p["total"] for p in self.relatorio().por_ponto), 4)
 
     def test_nomes_originais_de_pontos(self):
         PontoEmbarque.objects.filter(pk=self.ponto.pk).update(nome="Novo nome")
-        ponto = next(p for p in self.relatorio().por_ponto if p["ponto_id"] == self.ponto.pk)
-        self.assertEqual(ponto["nome"], "Praça Central")
+        ponto = self.relatorio().registros.filter(ponto=self.ponto).first()
+        self.assertEqual(ponto.nome_ponto, "Praça Central")
+        self.assertEqual(ponto.ponto_informado, "Praça Central")
+
+    def test_ponto_sem_snapshot_aparece_no_resultado_filtrado(self):
+        CheckIn.objects.filter(pk=self.ids[0]).update(nome_ponto="")
+        resposta = self.client.get(reverse("relatorios:painel"), {
+            **self.filtros, "ponto": self.ponto.pk, "freq_q": "Ana",
+        })
+        self.assertEqual(resposta.context["resumo"]["embarques"], 1)
+        self.assertEqual(resposta.context["embarques"][0].ponto_informado, "Praça Central")
+        self.assertContains(resposta, "<td>Praça Central</td>", html=True)
+        self.assertContains(resposta, "Ponto: Ida — 1: Praça Central")
+
+    def test_sem_ponto_respeita_nome_historico_sem_vinculo(self):
+        CheckIn.objects.filter(pk=self.ids[-1]).update(nome_ponto="Ponto antigo")
+        self.assertEqual(self.relatorio(sem_ponto="on").resumo["embarques"], 0)
+        self.assertEqual(self.relatorio().registros.get(pk=self.ids[-1]).ponto_informado, "Ponto antigo")
+
+    def test_busca_unica_filtra_todos_resultados_sem_perder_historico(self):
+        # O primeiro embarque de Ana tinha outro nome; a busca encontra a
+        # pessoa e mantém todas as presenças dela dentro dos demais filtros.
+        rel = self.relatorio(freq_q="Ana Silva")
+        self.assertEqual(rel.resumo["embarques"], 3)
+        self.assertEqual(list(rel.registros.values_list("associado_id", flat=True)), [self.ana.pk] * 3)
+        self.assertEqual(rel.frequencia.get()["embarques"], 3)
+        self.assertEqual([dia["total"] for dia in rel.por_dia], [2, 1])
+        self.assertEqual(rel.viagens.count(), 3)
+        ocupacao = next(v for v in rel.preparar_viagens(rel.viagens) if v["id"] == self.viagens[0].pk)
+        self.assertEqual(ocupacao["presentes"], 2)
+        self.ana.user.email = "ana@example.com"
+        self.ana.user.save(update_fields=["email"])
+        for busca in ("ana@example.com", self.ana.rua):
+            with self.subTest(busca=busca):
+                self.assertEqual(self.relatorio(freq_q=busca).resumo["embarques"], 3)
+
+    def test_tela_tem_uma_busca_e_rotas_incluidas_pelo_onibus(self):
+        resposta = self.client.get(reverse("relatorios:painel"), {**self.filtros, "onibus": self.onibus.pk})
+        self.assertContains(resposta, 'name="freq_q"', count=1)
+        self.assertContains(resposta, 'name="freq_instituicao"', count=1)
+        self.assertNotContains(resposta, 'name="associado"')
+        self.assertNotContains(resposta, 'name="rota"')
+        self.assertEqual(resposta.context["resumo"]["embarques"], 4)
+        self.assertContains(resposta, 'class="acoes acoes-relatorio"')
 
     def test_inativos_continuam_no_historico_e_filtros(self):
         self.ana.user.is_active = False
@@ -199,6 +255,29 @@ class RelatoriosTests(TestCase):
         r = self.client.get(reverse("relatorios:pdf"), {"data_inicial": "2025-01-01", "data_final": "2025-01-02"})
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.content.startswith(b"%PDF"))
+
+    def test_download_pdf_filtrado_com_texto_especial_e_ponto(self):
+        from reportlab.platypus import Paragraph
+        CheckIn.objects.filter(pk=self.ids[0]).update(nome_associado="Ana <Silva> & Filha", nome_ponto="")
+        filtros = {**self.filtros, "onibus": self.onibus.pk, "freq_q": "Ana",
+                   "sentido": "ida", "ponto": self.ponto.pk}
+        pagina = self.client.get(reverse("relatorios:painel"), filtros)
+        with patch("relatorios.pdf.Paragraph", wraps=Paragraph) as paragrafos:
+            resposta = self.client.get(reverse("relatorios:pdf"), filtros)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta["Content-Type"], "application/pdf")
+        self.assertEqual(resposta["Content-Disposition"],
+                         'attachment; filename="relatorios-unicap-2026-10-10-2026-10-11.pdf"')
+        self.assertTrue(resposta.content.startswith(b"%PDF"))
+        self.assertIn(b"%%EOF", resposta.content[-32:])
+        texto = "\n".join(chamada.args[0] for chamada in paragrafos.call_args_list)
+        self.assertIn("Ana &lt;Silva&gt; &amp; Filha", texto)
+        self.assertIn("Praça Central", texto)
+        self.assertIn("10/10/2026 17:30", texto)
+        self.assertNotIn("Beto", texto)
+        self.assertEqual(pagina.context["resumo"]["embarques"], 1)
+        for filtro in pagina.context["relatorio"].filtros_legiveis:
+            self.assertIn(filtro, texto)
 
     def test_post_nao_altera_dados(self):
         antes = CheckIn.objects.count()

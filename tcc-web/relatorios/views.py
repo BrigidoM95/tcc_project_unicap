@@ -45,7 +45,8 @@ def pagina(queryset, request, parametro):
 @administrador_ativo
 def painel(request):
     form = formulario(request)
-    contexto = {"form": form, "fuso": fuso_relatorios().key}
+    from gestao.indicadores import associados_por_instituicao
+    contexto = {"form": form, "fuso": fuso_relatorios().key,**associados_por_instituicao()}
     if form.is_valid():
         rel = RelatorioEmbarques(form.cleaned_data)
         parametros = form.data.copy()
@@ -57,7 +58,7 @@ def painel(request):
             embarques=pagina(rel.registros, request, "pagina_embarques"),
             frequencia=pagina(rel.frequencia, request, "pagina_frequencia"),
             viagens=viagens, linhas_viagens=rel.preparar_viagens(viagens),
-            por_dia=rel.por_dia, por_onibus=rel.por_onibus, por_ponto=rel.por_ponto,
+            por_dia=rel.por_dia,
         )
     return render(request, "relatorios/painel.html", contexto)
 

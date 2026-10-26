@@ -1,0 +1,22 @@
+{% extends 'paginas/base.html' %}
+{% block titulo %}Redefinir senha{% endblock %}
+{% block conteudo %}
+<section class="cartao formulario">
+    <h1>Redefinir senha</h1>
+    <p>{{ usuario }} · {{ usuario.get_tipo_display }} · RUA {{ usuario.rua }}</p>
+    <p>A senha atual deixará de funcionar. Informe a nova senha e repita para confirmar.</p>
+    <form method="post">
+        {% csrf_token %}{{ form.non_field_errors }}
+        {% for campo in form %}
+        <div class="campo">
+            {{ campo.label_tag }}{{ campo }}{{ campo.errors }}
+            {% if campo.help_text %}<div class="ajuda">{{ campo.help_text|safe }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="acoes">
+            <button type="submit">Redefinir senha</button>
+            <a class="botao secundario" href="{% url 'detalhe_usuario' usuario.pk %}">Cancelar</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

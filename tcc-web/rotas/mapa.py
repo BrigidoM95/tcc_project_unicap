@@ -21,17 +21,16 @@ def dados_localizacao(loc):
         'precisao_metros':float(loc.precisao_metros) if loc.precisao_metros is not None else None}
 
 def dados_rota(r):
-    return {'id':r.pk,'nome':r.nome,'origem':r.origem,'destino':r.destino,
+    return {'id':r.pk,'nome':r.nome,'destino':r.destino,
         'horario_ida':r.horario_ida.strftime('%H:%M'),'horario_retorno':r.horario_retorno.strftime('%H:%M'),
         'onibus_codigo':r.onibus.codigo,'pontos':[{'id':p.pk,'nome':p.nome,'endereco':p.endereco,
-            'sentido':p.sentido,'ordem':p.ordem,'latitude':float(p.latitude) if p.latitude is not None else None,
-            'longitude':float(p.longitude) if p.longitude is not None else None} for p in r.pontos.all()]}
+            'sentido':p.sentido,'ordem':p.ordem} for p in r.pontos.filter(ativo=True)]}
 
 def dados_viagem_mapa(v,loc):
-    total = v.total_checkins if hasattr(v,'total_checkins') else v.checkins.count()
+    total = v.checkins.filter(sentido=v.sentido_atual,cancelado_em__isnull=True).count()
     return {'id':v.pk,'rota_id':v.rota_id,'rota_nome':v.nome_rota_historico,
         'onibus_codigo':v.codigo_onibus_registrado or v.onibus.codigo,
-        'placa':v.placa_onibus_registrada or v.onibus.placa,'sentido':v.sentido,'status':v.status,
+        'placa':v.placa_onibus_registrada or v.onibus.placa,'sentido':v.sentido_atual,'status':v.status,
         'iniciada_em':v.iniciada_em.isoformat(),'finalizada_em':v.finalizada_em.isoformat() if v.finalizada_em else None,
         'presentes':total,'capacidade':v.capacidade_embarque,'vagas':max(0,v.capacidade_embarque-total),
         'localizacao':dados_localizacao(loc)}
@@ -48,14 +47,19 @@ class BaseMapaApi(APIView):
     def viagens(self,request,p):
         qs=Viagem.objects.select_related('rota','onibus').annotate(total_checkins=Count('checkins'))
         if not eh_administrador(request.user): qs=qs.filter(status='em_andamento',onibus__status='ativo',rota__status='ativa')
-        if p and p.tipo=='motorista': qs=qs.filter(motorista=p)
+        if p:
+            from .operacao import consulta_viagens
+            qs=qs.filter(pk__in=consulta_viagens(p).values('pk'))
         return qs
 
 class MapaApi(BaseMapaApi):
     def get(self,request):
         p=self.perfil(request)
-        rotas=Rota.objects.filter(status='ativa',onibus__status='ativo').exclude(onibus__situacao='manutencao').select_related('onibus').prefetch_related('pontos')
+        rotas=Rota.objects.filter(status='ativa',onibus__status='ativo').select_related('onibus').prefetch_related('pontos')
         if p and p.tipo=='motorista': rotas=rotas.filter(onibus__motorista=p)
+        elif p and p.tipo=='associado':rotas=rotas.filter(instituicoes=p.curso.instituicao) if p.curso_id else rotas.none()
+        elif p and p.tipo=='fiscal':
+            rotas=rotas.filter(fiscal=p)
         ult=LocalizacaoViagem.objects.filter(viagem_id=OuterRef('pk')).order_by('-capturada_em','-pk')
         viagens=list(self.viagens(request,p).filter(status='em_andamento').annotate(ultima_id=Subquery(ult.values('pk')[:1])))
         locais=LocalizacaoViagem.objects.in_bulk(v.ultima_id for v in viagens if v.ultima_id)

@@ -1,13 +1,9 @@
-{% extends "rotas/base.html" %}
-{% block titulo %}Presenças{% endblock %}
-{% block conteudo %}
-<h1>Gerenciamento de embarque</h1>
-<div class="cartao"><form method="get" class="filtros">
-<select name="viagem"><option value="">Todas as viagens</option>
-{% for v in viagens %}<option value="{{ v.pk }}" {% if selecionada == v.pk|stringformat:"s" %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
-<button class="botao">Filtrar</button></form><p>{{ total }} embarque(s) confirmado(s). Exibição limitada aos 500 mais recentes.</p></div>
-<div class="cartao" style="overflow-x:auto"><table><thead><tr><th>Associado / RUA</th><th>Viagem</th><th>Ônibus / Placa</th><th>Fiscal</th><th>Data e hora</th></tr></thead><tbody>
-{% for c in registros %}<tr><td>{{ c.nome_associado }} / {{ c.rua_associado }}</td><td>{{ c.viagem }}</td><td>{{ c.codigo_onibus }} / {{ c.placa_onibus }}</td><td>{{ c.fiscal }}</td><td>{{ c.registrado_em|date:"d/m/Y H:i:s" }}</td></tr>
-{% empty %}<tr><td colspan="5">Nenhum embarque registrado.</td></tr>{% endfor %}
-</tbody></table></div>
-{% endblock %}
+{% extends 'paginas/base.html' %}{% block titulo %}Área de embarque{% endblock %}{% block conteudo %}
+<header class="cabecalho"><div><h1>Área de embarque</h1><p class="subtitulo">Quem embarcou em cada ônibus e o horário do embarque.</p></div></header>
+{% if data_exibida %}<p><strong>Data dos embarques: {{ data_exibida|date:'d/m/Y' }}</strong>{% if ultima_viagem %}<br>Data selecionada pela última viagem iniciada: {{ ultima_viagem.nome_rota_historico }} · {{ ultima_viagem.onibus.nome }} ({{ ultima_viagem.iniciada_em|date:'d/m/Y H:i' }}).{% endif %}</p>{% endif %}
+<section class="cartao"><form method="get"><div class="filtros">{% for campo in form %}<div>{{ campo.label_tag }}{{ campo }}{{ campo.errors }}</div>{% endfor %}</div><div class="acoes"><button>Filtrar</button><a class="botao secundario" href="{% url 'presencas_embarque' %}">Última viagem</a><a class="botao secundario" href="?data={{ hoje|date:'Y-m-d' }}">Hoje</a><a class="botao secundario" href="?{{ parametros }}">Atualizar</a></div></form></section>
+{% for grupo in grupos %}<section class="cartao" id="{{ grupo.id }}"><h2>{{ grupo.viagem.onibus.nome }} · {{ grupo.viagem.placa_onibus_registrada }}</h2><p>{{ grupo.viagem.nome_rota_historico }} · {{ grupo.sentido }} <strong>{{ grupo.total }} / {{ grupo.viagem.capacidade_embarque }} embarcados</strong></p>
+<div class="ocupacao" role="meter" aria-label="Ocupação" aria-valuemin="0" aria-valuemax="{{ grupo.viagem.capacidade_embarque }}" aria-valuenow="{{ grupo.total }}"><span style="width:{{ grupo.percentual }}%"></span></div>
+<div class="table-scroll"><table><thead><tr><th>Horário</th><th>Associado</th><th>RUA</th><th>Poltrona</th><th>Ponto</th><th>Registro</th></tr></thead><tbody>{% for r in grupo.registros %}<tr><td>{{ r.horario|date:'H:i:s' }}</td><td>{{ r.nome_associado }}</td><td>{{ r.rua_associado }}</td><td>{% if r.legado %}Não registrada{% else %}{{ r.vaga|stringformat:'02d' }}{% endif %}</td><td>{{ r.nome_ponto|default:'Não informado' }}</td><td>{{ r.get_origem_display }}</td></tr>{% empty %}<tr><td colspan="6">Nenhum embarque</td></tr>{% endfor %}</tbody></table></div>
+{% if grupo.registros.paginator.num_pages > 1 %}<nav aria-label="Páginas de {{ grupo.viagem.onibus.nome }} {{ grupo.sentido }}">{% if grupo.registros.has_previous %}<a href="?{{ grupo.parametros }}&{{ grupo.chave }}={{ grupo.registros.previous_page_number }}#{{ grupo.id }}">Anteriores</a>{% endif %} Página {{ grupo.registros.number }} de {{ grupo.registros.paginator.num_pages }} {% if grupo.registros.has_next %}<a href="?{{ grupo.parametros }}&{{ grupo.chave }}={{ grupo.registros.next_page_number }}#{{ grupo.id }}">Próximos</a>{% endif %}</nav>{% endif %}</section>
+{% empty %}{% if not form.errors %}<section class="cartao">Nenhuma viagem no dia selecionado.</section>{% endif %}{% endfor %}{% endblock %}

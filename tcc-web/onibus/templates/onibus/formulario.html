@@ -49,7 +49,6 @@
         >
 
             {% csrf_token %}
-<div class="campo">{{ form.situacao.label_tag }}{{ form.situacao }}{{ form.situacao.errors }}</div>
 
 
             <div class="grupo">
@@ -131,14 +130,14 @@
                 </label>
 
 
-                {% if modo_edicao and onibus.foto %}
+                {% if modo_edicao and onibus.foto_url %}
 
                     <div class="foto-atual">
 
                         <p>Foto atual:</p>
 
                         <img
-                            src="{{ onibus.foto.url }}"
+                            src="{{ onibus.foto_url }}"
                             alt="Foto atual do ônibus"
                         >
 

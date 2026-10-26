@@ -1,11 +1,13 @@
 # UNICAP — transporte universitário
 
-Comece por [LEIA-ME-PRIMEIRO.md](LEIA-ME-PRIMEIRO.md).
+Projeto atualizado em 26/10/2026, preservando a versão 4 e aplicando as correções solicitadas para o painel e aplicativo.
 
-- `tcc-web/`: Django, API REST, relatórios e administração.
-- `lib/`: aplicativo Flutter para associados, fiscais e motoristas.
-- `scripts/`: configuração e instalação local.
-- `deploy/`: implantação com PostgreSQL, Gunicorn, Caddy/HTTPS e backups.
-- `docs/`: validação, implantação e alinhamento do TCC.
+- [Correções, arquivos alterados e testes por item](docs/CORRECOES_2026-10-26.md)
 
-Esta entrega é um pacote consolidado; não requer o ZIP parcial do Módulo 5.
+- [Abrir e usar o projeto](LEIA-ME-PRIMEIRO.md)
+- [Alterações e preservação dos dados](docs/ALTERACOES_DOCUMENTACAO_V3.md)
+- [Prévia das telas implementadas](docs/previas-mobile/index.html)
+- [Validação](docs/VALIDACAO.md)
+- [Implantação e backups](docs/IMPLANTACAO.md)
+
+`tcc-web/` contém painel Django, API e relatórios. `lib/` contém o aplicativo Flutter. `scripts/` contém instalação e inicialização; `deploy/`, os serviços de produção. Os dados reais e backups locais não devem acompanhar uma distribuição pública do código.

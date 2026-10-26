@@ -18,10 +18,6 @@ class Rota(models.Model):
         verbose_name="Nome da rota",
     )
 
-    origem = models.CharField(
-        max_length=150,
-        verbose_name="Origem",
-    )
 
     destino = models.CharField(
         max_length=150,
@@ -50,6 +46,10 @@ class Rota(models.Model):
         verbose_name="Status",
     )
 
+    fiscal = models.ForeignKey(Usuario, null=True, blank=True, on_delete=models.PROTECT, related_name='rotas_fiscal', limit_choices_to={'tipo': 'fiscal'})
+    instituicoes = models.ManyToManyField('usuarios.Instituicao', blank=True, related_name='rotas')
+    dias_operacao = models.JSONField(default=list, blank=True, help_text='Dias da semana: 0=segunda, 6=domingo; vazio = todos.')
+
     observacoes = models.TextField(
         max_length=500,
         blank=True,
@@ -62,7 +62,7 @@ class Rota(models.Model):
         ordering = ["nome", "pk"]
 
     def __str__(self):
-        return f"{self.nome} — {self.origem} → {self.destino}"
+        return f"{self.nome} — {self.destino}"
 
     @property
     def ativa(self):
@@ -79,7 +79,6 @@ class Rota(models.Model):
         super().clean()
 
         self.nome = (self.nome or "").strip()
-        self.origem = (self.origem or "").strip()
         self.destino = (self.destino or "").strip()
 
         erros = {}
@@ -87,20 +86,8 @@ class Rota(models.Model):
         if not self.nome:
             erros["nome"] = "Informe o nome da rota."
 
-        if not self.origem:
-            erros["origem"] = "Informe a origem."
-
         if not self.destino:
             erros["destino"] = "Informe o destino."
-
-        if (
-            self.origem
-            and self.destino
-            and self.origem.casefold() == self.destino.casefold()
-        ):
-            erros["destino"] = (
-                "O destino deve ser diferente da origem."
-            )
 
         if self.ativa and self.onibus_id:
             onibus = (
@@ -129,11 +116,36 @@ class Rota(models.Model):
                     "a um motorista ativo."
                 )
 
+        if self.horario_ida and self.horario_retorno and self.horario_retorno <= self.horario_ida:
+            erros['horario_retorno'] = 'O retorno deve ser posterior à ida.'
+        if self.fiscal_id and (self.fiscal.tipo != 'fiscal' or not self.fiscal.user.is_active):
+            erros['fiscal'] = 'Selecione um fiscal ativo.'
+        if not isinstance(self.dias_operacao, list) or any(type(d) is not int or d not in range(7) for d in self.dias_operacao):
+            erros['dias_operacao'] = 'Informe uma lista de dias entre 0 e 6.'
+        if self.ativa and self.onibus_id and self.horario_ida and self.horario_retorno:
+            from django.db.models import Q
+            conflitos = Rota.objects.filter(Q(onibus_id=self.onibus_id) | Q(onibus__motorista_id=self.onibus.motorista_id), status='ativa', horario_ida__lt=self.horario_retorno, horario_retorno__gt=self.horario_ida).exclude(pk=self.pk)
+            for outra in conflitos:
+                if set(self.dias_operacao or range(7)) & set(outra.dias_operacao or range(7)):
+                    erros['onibus'] = f'Conflito de agenda com a rota {outra.nome}.'
+        if self.pk and not self.ativa and self.viagens.filter(status='em_andamento').exists():
+            erros['status'] = 'Finalize a viagem antes de desativar a rota.'
+        if self.pk:
+            anterior = type(self).objects.get(pk=self.pk)
+            if (anterior.onibus_id != self.onibus_id or anterior.fiscal_id != self.fiscal_id) and self.viagens.filter(status='em_andamento').exists():
+                erros['onibus'] = 'Há uma viagem em andamento. Use a intervenção administrativa da viagem para alterar os responsáveis.'
+            elif anterior.onibus_id != self.onibus_id:
+                from embarques.models import ReservaAssento
+                if ReservaAssento.objects.filter(viagem__rota=self, viagem__etapa='agendada',
+                        ativa=True, expira_em__gt=timezone.now()).exists():
+                    erros['onibus'] = 'Esta rota tem reservas em uma viagem agendada. Cancele as reservas antes de trocar o ônibus.'
         if erros:
             raise ValidationError(erros)
 
 
 class PontoEmbarque(models.Model):
+    ativo = models.BooleanField(default=True)
+    ponto = models.ForeignKey('Ponto', null=True, blank=True, on_delete=models.PROTECT, related_name='vinculos')
 
     class Sentido(models.TextChoices):
         IDA = "ida", "Ida"
@@ -168,29 +180,7 @@ class PontoEmbarque(models.Model):
         verbose_name="Ordem da parada",
     )
 
-    latitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        validators=[
-            MinValueValidator(-90),
-            MaxValueValidator(90),
-        ],
-        verbose_name="Latitude",
-    )
 
-    longitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        validators=[
-            MinValueValidator(-180),
-            MaxValueValidator(180),
-        ],
-        verbose_name="Longitude",
-    )
 
     class Meta:
         verbose_name = "Ponto de embarque"
@@ -229,16 +219,6 @@ class PontoEmbarque(models.Model):
                 "Informe o endereço ou referência."
             )
 
-        if self.latitude is not None and self.longitude is None:
-            erros["longitude"] = (
-                "Informe também a longitude."
-            )
-
-        if self.longitude is not None and self.latitude is None:
-            erros["latitude"] = (
-                "Informe também a latitude."
-            )
-
         if erros:
             raise ValidationError(erros)
 
@@ -250,6 +230,8 @@ class Viagem(models.Model):
         RETORNO = "retorno", "Retorno"
 
     class Status(models.TextChoices):
+        AGENDADA = "agendada", "Agendada"
+        CANCELADA = "cancelada", "Cancelada"
         EM_ANDAMENTO = "em_andamento", "Em andamento"
         FINALIZADA = "finalizada", "Finalizada"
 
@@ -300,6 +282,31 @@ class Viagem(models.Model):
         verbose_name="Finalizada em",
     )
 
+    class Etapa(models.TextChoices):
+        AGENDADA = 'agendada', 'Agendada'
+        EMBARQUE = 'embarque_ida', 'Embarque da ida'
+        IDA = 'transito_ida', 'Em trânsito (ida)'
+        DESTINO = 'no_destino', 'No destino'
+        VOLTA = 'transito_volta', 'Em trânsito (volta)'
+        ENCERRADA = 'encerrada', 'Encerrada'
+        CANCELADA = 'cancelada', 'Cancelada'
+    etapa = models.CharField(max_length=20, choices=Etapa.choices, default=Etapa.AGENDADA)
+    data_servico = models.DateField(default=timezone.localdate, db_index=True)
+    ciclo_completo = models.BooleanField(default=True)
+    fiscal = models.ForeignKey(Usuario, null=True, blank=True, on_delete=models.PROTECT, related_name='viagens_fiscal')
+    partida_ida_em = models.DateTimeField(null=True, blank=True)
+    chegada_em = models.DateTimeField(null=True, blank=True)
+    partida_volta_em = models.DateTimeField(null=True, blank=True)
+    encerrada_pelo_sistema = models.BooleanField(default=False)
+    motivo_cancelamento = models.CharField(max_length=300, blank=True)
+
+    @property
+    def sentido_atual(self):
+        return 'retorno' if self.etapa in ('no_destino', 'transito_volta', 'encerrada') else 'ida'
+
+    def embarque_aberto(self, sentido):
+        return self.status == 'em_andamento' and ((sentido == 'ida' and self.etapa == 'embarque_ida') or (sentido == 'retorno' and self.etapa == 'no_destino'))
+
     # Fotografia da capacidade no início da viagem. Viagens antigas ficam
     # sem este dado: não podemos reconstruir a capacidade histórica.
     capacidade_registrada = models.PositiveSmallIntegerField(
@@ -338,6 +345,7 @@ class Viagem(models.Model):
         ordering = ["-iniciada_em", "-pk"]
 
         constraints = [
+            models.UniqueConstraint(fields=['rota', 'data_servico'], condition=models.Q(ciclo_completo=True), name='viagem_rota_dia_unica'),
             models.UniqueConstraint(
                 fields=["onibus"],
                 condition=models.Q(status="em_andamento"),
@@ -351,11 +359,11 @@ class Viagem(models.Model):
             models.CheckConstraint(
                 condition=(
                     models.Q(
-                        status="em_andamento",
+                        status__in=["agendada", "em_andamento"],
                         finalizada_em__isnull=True,
                     )
                     | models.Q(
-                        status="finalizada",
+                        status__in=["finalizada", "cancelada"],
                         finalizada_em__isnull=False,
                     )
                 ),
@@ -421,6 +429,7 @@ class LocalizacaoViagem(models.Model):
         validators=[MinValueValidator(0)],
     )
 
+    velocidade = models.FloatField(null=True, blank=True)
     capturada_em = models.DateTimeField()
 
     recebida_em = models.DateTimeField(
@@ -472,3 +481,12 @@ class LocalizacaoViagem(models.Model):
             f"Viagem {self.viagem_id} — "
             f"{self.latitude}, {self.longitude}"
         )
+
+class Ponto(models.Model):
+    nome = models.CharField(max_length=100, unique=True)
+    endereco = models.CharField('Endereço ou referência', max_length=200)
+    ativo = models.BooleanField(default=True)
+    class Meta:
+        ordering = ['nome']
+    def __str__(self):
+        return self.nome

@@ -2,6 +2,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+
+
 from django.db.models import Q
 
 class Despesa(models.Model):
@@ -30,6 +32,8 @@ class LogAuditoria(models.Model):
     modelo = models.CharField(max_length=100, blank=True)
     objeto_id = models.CharField(max_length=40, blank=True)
     detalhes = models.JSONField(default=dict)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    descricao = models.CharField(max_length=300, blank=True)
     class Meta:
         ordering = ['-criado_em','-pk']
 
