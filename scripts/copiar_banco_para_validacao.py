@@ -12,6 +12,11 @@ RAIZ=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(RAIZ/'tcc-web'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings')
 import django
+from django.conf import settings
+# Inclui também o histórico do app aposentado ao copiar uma instalação antiga.
+# O estado aplicado decide se a tabela existe; nenhuma migração roda na origem.
+if 'associados' not in settings.INSTALLED_APPS:
+    settings.INSTALLED_APPS = [*settings.INSTALLED_APPS, 'associados']
 django.setup()
 from django.db import connections,transaction
 from django.db.migrations.executor import MigrationExecutor

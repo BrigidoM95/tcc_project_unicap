@@ -1,6 +1,6 @@
 from django import forms
 from django.utils import timezone
-from usuarios.models import Usuario, Instituicao, Curso
+from usuarios.models import Instituicao, Curso
 from onibus.models import Onibus
 from .models import Despesa
 from rotas.models import Ponto

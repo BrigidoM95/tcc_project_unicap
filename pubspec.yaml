@@ -14,7 +14,6 @@ dependencies:
   latlong2: ^0.9.1
   mobile_scanner: ^5.1.1
   qr_flutter: ^4.1.0
-  cupertino_icons: ^1.0.8
   flutter_secure_storage: ^11.2.0
   wakelock_plus: ^1.8.1
   screen_brightness: ^2.1.11
@@ -41,7 +40,3 @@ flutter:
   assets:
     - assets/logo_unicap.png
     - assets/onibus_referencia.png
-    - assets/logo.jpeg
-    - assets/onibusPreto.png
-    - assets/onibusAzul.png
-    - assets/onibusLaranja.png

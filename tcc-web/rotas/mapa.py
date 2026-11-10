@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
@@ -18,16 +18,17 @@ def dados_localizacao(loc):
     idade = max(0, int((timezone.now()-loc.capturada_em).total_seconds()))
     return {'latitude':float(loc.latitude),'longitude':float(loc.longitude),
         'capturada_em':loc.capturada_em.isoformat(),'idade_segundos':idade,'desatualizada':idade>60,
+        'velocidade_kmh':round(loc.velocidade*3.6,1) if loc.velocidade is not None else None,
         'precisao_metros':float(loc.precisao_metros) if loc.precisao_metros is not None else None}
 
 def dados_rota(r):
     return {'id':r.pk,'nome':r.nome,'destino':r.destino,
         'horario_ida':r.horario_ida.strftime('%H:%M'),'horario_retorno':r.horario_retorno.strftime('%H:%M'),
         'onibus_codigo':r.onibus.codigo,'pontos':[{'id':p.pk,'nome':p.nome,'endereco':p.endereco,
-            'sentido':p.sentido,'ordem':p.ordem} for p in r.pontos.filter(ativo=True)]}
+            'sentido':p.sentido,'ordem':p.ordem} for p in r.pontos.all() if p.ativo]}
 
 def dados_viagem_mapa(v,loc):
-    total = v.checkins.filter(sentido=v.sentido_atual,cancelado_em__isnull=True).count()
+    total = v.presentes_retorno if v.sentido_atual == 'retorno' else v.presentes_ida
     return {'id':v.pk,'rota_id':v.rota_id,'rota_nome':v.nome_rota_historico,
         'onibus_codigo':v.codigo_onibus_registrado or v.onibus.codigo,
         'placa':v.placa_onibus_registrada or v.onibus.placa,'sentido':v.sentido_atual,'status':v.status,
@@ -45,7 +46,9 @@ class BaseMapaApi(APIView):
         if p is None: raise PermissionDenied('Perfil sem acesso ao mapa.')
         return p
     def viagens(self,request,p):
-        qs=Viagem.objects.select_related('rota','onibus').annotate(total_checkins=Count('checkins'))
+        qs=Viagem.objects.select_related('rota','onibus').annotate(
+            presentes_ida=Count('checkins',filter=Q(checkins__sentido='ida',checkins__cancelado_em__isnull=True)),
+            presentes_retorno=Count('checkins',filter=Q(checkins__sentido='retorno',checkins__cancelado_em__isnull=True)))
         if not eh_administrador(request.user): qs=qs.filter(status='em_andamento',onibus__status='ativo',rota__status='ativa')
         if p:
             from .operacao import consulta_viagens
@@ -71,11 +74,19 @@ class MapaApi(BaseMapaApi):
 class DetalheMapaApi(BaseMapaApi):
     def get(self,request,viagem_id):
         p=self.perfil(request);v=get_object_or_404(self.viagens(request,p),pk=viagem_id)
-        # No máximo 300 leituras recentes (~50 minutos); o restante permanece no banco.
+        cursor=request.query_params.get('apos')
+        if cursor is not None and (not cursor.isascii() or not cursor.isdecimal() or len(cursor)>19 or int(cursor)>9223372036854775807):
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'apos':'Informe um identificador de posição válido.'})
+        # O cursor é o ID de recepção, inclusive para posições offline atrasadas.
+        # Uma só consulta traz até 300 posições recentes e a posição atual.
         locais=list(v.localizacoes.order_by('-capturada_em','-pk')[:300])
+        novas=[l for l in locais if cursor is None or l.pk>int(cursor)]
         rota=Rota.objects.select_related('onibus').prefetch_related('pontos').get(pk=v.rota_id)
         return Response({'viagem':dados_viagem_mapa(v,locais[0] if locais else None),'rota':dados_rota(rota),
-            'trajeto':[{'latitude':float(l.latitude),'longitude':float(l.longitude)} for l in reversed(locais)],
+            'trajeto':[{'id':l.pk,'latitude':float(l.latitude),'longitude':float(l.longitude),
+                'capturada_em':l.capturada_em.isoformat()} for l in reversed(novas)],
+            'cursor':max([int(cursor or 0),*[l.pk for l in locais]]),
             'limite_trajeto':300})
 
 @administrador_ativo

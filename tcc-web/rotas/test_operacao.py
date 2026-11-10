@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 from embarques.tests import Cenario
-from embarques.models import ReservaAssento
 from gestao.models import LogAuditoria
 from .models import Viagem,LocalizacaoViagem,Rota
 from . import operacao as op
@@ -60,8 +59,9 @@ class OperacaoTests(Cenario,TestCase):
             capturada_em=timezone.now(),velocidade=10,precisao_metros=5)
         d=op.dados_viagem(self.viagem,self.motorista)
         self.assertEqual(len(d['trajeto_percorrido']),1)
-        self.assertIsNone(d['proximo_ponto']);self.assertIsNone(d['previsao_chegada']);self.assertIsNone(d['previsao_metodo'])
-        self.assertTrue(all(p['passou_em'] is None for p in d['pontos']))
+        for campo in ('proximo_ponto','previsao_chegada','previsao_metodo'):
+            self.assertNotIn(campo,d)
+        self.assertTrue(all('passou_em' not in p for p in d['pontos']))
         self.assertNotIn('latitude',d['pontos'][0])
     def test_conflito_de_horario_e_desativacao(self):
         r=Rota(nome='Conflito',destino='B',onibus=self.onibus,horario_ida=time(18),horario_retorno=time(22))

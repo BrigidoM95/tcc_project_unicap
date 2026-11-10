@@ -14,6 +14,14 @@ class ApiException implements Exception {
   String toString() => mensagem;
 }
 
+class _ConsultaGuardada {
+  Map<String, dynamic> dados;
+  DateTime quando;
+  String assinatura, gravada = '';
+  Timer? persistencia;
+  _ConsultaGuardada(this.dados, this.quando) : assinatura = jsonEncode(dados);
+}
+
 class ApiService {
   static Map<String, dynamic>? _usuario;
   static bool falhaTemporaria(Object e) =>
@@ -27,8 +35,10 @@ class ApiService {
     bool delete = false,
     bool cache = false,
   }) async {
+    final versao = _versaoSessao;
     final dono = _usuario?['id'];
     final chave = 'consulta.$dono.$caminho';
+    final guardar = cache && corpo == null && !delete;
     try {
       final dados = _lerMapa(
         await _autenticada(
@@ -40,16 +50,31 @@ class ApiService {
         ),
       );
       avisosCache.remove(caminho);
-      if (cache) {
-        await Armazenamento.salvar(chave, {
-          'dados': dados,
-          'quando': DateTime.now().toUtc().toIso8601String(),
-        });
+      if (guardar) {
+        final consulta = _consultas.putIfAbsent(
+          chave,
+          () => _ConsultaGuardada(dados, DateTime.now()),
+        );
+        consulta.dados = dados;
+        consulta.quando = DateTime.now();
+        consulta.assinatura = jsonEncode(dados);
+        if (consulta.persistencia == null &&
+            consulta.assinatura != consulta.gravada) {
+          await _persistirConsulta(chave, consulta);
+        }
       }
       return dados;
     } catch (e) {
-      if (cache && falhaTemporaria(e)) {
-        final salvo = await Armazenamento.ler(chave);
+      _conferirSessao(versao);
+      if (guardar && falhaTemporaria(e)) {
+        final memoria = _consultas[chave];
+        final salvo = memoria != null
+            ? {
+                'dados': memoria.dados,
+                'quando': memoria.quando.toIso8601String(),
+              }
+            : await Armazenamento.ler(chave);
+        _conferirSessao(versao);
         final quando = DateTime.tryParse('${salvo?['quando']}');
         if (quando != null &&
             DateTime.now().difference(quando) < const Duration(hours: 24)) {
@@ -58,6 +83,30 @@ class ApiService {
         }
       }
       rethrow;
+    }
+  }
+
+  static Future<void> _persistirConsulta(
+    String chave,
+    _ConsultaGuardada consulta,
+  ) async {
+    final assinatura = consulta.assinatura;
+    final dados = {
+      'dados': consulta.dados,
+      'quando': consulta.quando.toUtc().toIso8601String(),
+    };
+    consulta.persistencia = Timer(const Duration(minutes: 2), () {
+      consulta.persistencia = null;
+      if (identical(_consultas[chave], consulta) &&
+          consulta.assinatura != consulta.gravada) {
+        unawaited(_persistirConsulta(chave, consulta));
+      }
+    });
+    try {
+      await Armazenamento.salvar(chave, dados);
+      consulta.gravada = assinatura;
+    } catch (_) {
+      // O último resultado segue disponível em memória se o aparelho negar escrita.
     }
   }
 
@@ -95,7 +144,7 @@ class ApiService {
     Armazenamento.emMemoria = true;
   }
 
-  static final Map<String, ({dynamic dados, DateTime quando})> _cache = {};
+  static final Map<String, _ConsultaGuardada> _consultas = {};
   static final Map<String, DateTime> avisosCache = {};
 
   static const Duration _timeout = Duration(seconds: 20);
@@ -146,7 +195,10 @@ class ApiService {
 
   static void encerrarSessao() {
     _versaoSessao++;
-    _cache.clear();
+    for (final consulta in _consultas.values) {
+      consulta.persistencia?.cancel();
+    }
+    _consultas.clear();
     avisosCache.clear();
     _access = null;
     _usuario = null;
@@ -201,41 +253,37 @@ class ApiService {
     encerrarSessao();
     final versao = _versaoSessao;
 
-    try {
-      final response = await _client
-          .post(
-            Uri.parse('${baseUrl}api/login/'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'identificador': email, 'senha': senha}),
-          )
-          .timeout(_timeout);
+    final response = await _client
+        .post(
+          Uri.parse('${baseUrl}api/login/'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'identificador': email, 'senha': senha}),
+        )
+        .timeout(_timeout);
 
-      _conferirSessao(versao);
+    _conferirSessao(versao);
 
-      if (response.statusCode != 200) {
-        _lerResposta(response);
-      }
-
-      final dados = _lerMapa(response);
-      final access = dados['access'];
-      final refresh = dados['refresh'];
-
-      if (access is! String ||
-          access.isEmpty ||
-          refresh is! String ||
-          refresh.isEmpty ||
-          dados['usuario'] is! Map) {
-        return null;
-      }
-
-      _access = access;
-      _refresh = refresh;
-      _tokenDoLogin = access;
-      _usuario = Map<String, dynamic>.from(dados['usuario'] as Map);
-      return dados;
-    } catch (_) {
-      rethrow;
+    if (response.statusCode != 200) {
+      _lerResposta(response);
     }
+
+    final dados = _lerMapa(response);
+    final access = dados['access'];
+    final refresh = dados['refresh'];
+
+    if (access is! String ||
+        access.isEmpty ||
+        refresh is! String ||
+        refresh.isEmpty ||
+        dados['usuario'] is! Map) {
+      return null;
+    }
+
+    _access = access;
+    _refresh = refresh;
+    _tokenDoLogin = access;
+    _usuario = Map<String, dynamic>.from(dados['usuario'] as Map);
+    return dados;
   }
 
   static Future<String> _solicitarRenovacao(int versao) async {
@@ -372,27 +420,6 @@ class ApiService {
     return response;
   }
 
-  // ÔNIBUS
-
-  static Future<List<Map<String, dynamic>>> listarOnibus(
-    String accessToken,
-  ) async {
-    final dados = await _consulta('api/onibus/', accessToken, cache: true);
-
-    if (dados is! List) {
-      throw ApiException('Formato inesperado recebido da API.');
-    }
-
-    return dados.map((item) => Map<String, dynamic>.from(item as Map)).toList();
-  }
-
-  static Future<Map<String, dynamic>> buscarOnibus(
-    int id,
-    String accessToken,
-  ) async {
-    return _lerMapa(await _autenticada('api/onibus/$id/', accessToken));
-  }
-
   static String tratarUrlImagem(String? url) {
     if (url == null || url.isEmpty) return '';
 
@@ -409,114 +436,4 @@ class ApiService {
     final caminho = url.startsWith('/') ? url.substring(1) : url;
     return '$baseUrl$caminho';
   }
-
-  // VIAGENS
-
-  static Future<Map<String, dynamic>> painelMotorista(String token) async {
-    return _lerMapa(await _autenticada('api/viagens/painel/', token));
-  }
-
-  static Future<Map<String, dynamic>> iniciarViagem(
-    int rotaId,
-    String sentido,
-    String token,
-  ) async {
-    return _lerMapa(
-      await _autenticada(
-        'api/viagens/iniciar/',
-        token,
-        post: true,
-        corpo: {'rota_id': rotaId, 'sentido': sentido},
-      ),
-    );
-  }
-
-  static Future<Map<String, dynamic>> finalizarViagem(
-    int viagemId,
-    String token,
-  ) async {
-    return _lerMapa(
-      await _autenticada('api/viagens/$viagemId/finalizar/', token, post: true),
-    );
-  }
-
-  static Future<Map<String, dynamic>> enviarLocalizacao({
-    required int viagemId,
-    required String token,
-    required double latitude,
-    required double longitude,
-    required double precisaoMetros,
-    required DateTime capturadaEm,
-  }) async {
-    return _lerMapa(
-      await _autenticada(
-        'api/viagens/$viagemId/localizacao/',
-        token,
-        post: true,
-        corpo: {
-          'latitude': latitude.toStringAsFixed(6),
-          'longitude': longitude.toStringAsFixed(6),
-          'precisao_metros': precisaoMetros.isFinite && precisaoMetros >= 0
-              ? precisaoMetros.toStringAsFixed(2)
-              : null,
-          'capturada_em': capturadaEm.toUtc().toIso8601String(),
-        },
-      ),
-    );
-  }
-
-  static Future<Map<String, dynamic>> embarques(
-    String caminho,
-    String token, {
-    Map<String, dynamic>? corpo,
-  }) async {
-    if (corpo == null && caminho.startsWith('historico/')) {
-      return Map<String, dynamic>.from(
-        await _consulta('api/embarques/$caminho', token, cache: true),
-      );
-    }
-    return _lerMapa(
-      await _autenticada(
-        'api/embarques/$caminho',
-        token,
-        post: corpo != null,
-        corpo: corpo,
-      ),
-    );
-  }
-
-  // Cache somente de consultas. Não confirma embarques nem reutiliza GPS offline.
-  static Future<dynamic> _consulta(
-    String caminho,
-    String token, {
-    bool cache = false,
-  }) async {
-    final versao = _versaoSessao;
-    avisosCache.remove(caminho);
-    try {
-      final response = await _autenticada(caminho, token);
-      final dados = _lerResposta(response);
-      if (cache) _cache[caminho] = (dados: dados, quando: DateTime.now());
-      return dados;
-    } catch (e) {
-      _conferirSessao(versao);
-      final salvo = _cache[caminho];
-      if (cache &&
-          (e is TimeoutException || e is http.ClientException) &&
-          salvo != null &&
-          DateTime.now().difference(salvo.quando) <
-              const Duration(minutes: 5)) {
-        avisosCache[caminho] = salvo.quando;
-        return salvo.dados;
-      }
-      rethrow;
-    }
-  }
-
-  static Future<Map<String, dynamic>> mapa(String token) async =>
-      Map<String, dynamic>.from(await _consulta('api/mapa/', token));
-  static Future<Map<String, dynamic>> mapaViagem(int id, String token) async =>
-      Map<String, dynamic>.from(
-        await _consulta('api/mapa/viagens/$id/', token),
-      );
 }

@@ -7,10 +7,9 @@ from django.utils import timezone
 from django.core.cache import cache
 from rest_framework.test import APIClient
 from usuarios.models import Usuario, Instituicao, Curso
-from usuarios.forms import CadastroUsuarioForm, EdicaoUsuarioForm
+from usuarios.forms import CadastroUsuarioForm
 from onibus.models import Onibus
 from rotas.models import Rota, PontoEmbarque, Viagem, LocalizacaoViagem
-from embarques.models import CheckIn
 from .models import Despesa, LogAuditoria
 
 class SistemaIntegradoTests(TestCase):

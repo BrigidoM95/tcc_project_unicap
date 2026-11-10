@@ -2,8 +2,8 @@ from django.test import TestCase
 from embarques.tests import Cenario
 
 class OnibusApiTests(Cenario,TestCase):
-    def test_leitura_preservada_sem_email_do_motorista(self):
-        c=self.cliente(self.associado)
+    def test_leitura_administrativa_preservada_sem_email_do_motorista(self):
+        c=self.cliente(self.perfil('GestorLeitura','administrador'))
         resposta=c.get('/api/onibus/')
         self.assertEqual(resposta.status_code,200,resposta.data)
         self.assertEqual(resposta.data[0]['id'],self.onibus.pk)

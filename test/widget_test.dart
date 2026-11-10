@@ -14,6 +14,7 @@ import 'package:aulas_flutter/screens/associado/historico_v3.dart';
 import 'package:aulas_flutter/screens/fiscal/fluxo.dart';
 import 'package:aulas_flutter/screens/motorista/viagem.dart';
 import 'package:aulas_flutter/services/api_service.dart';
+import 'package:aulas_flutter/services/consulta_visivel.dart';
 import 'package:aulas_flutter/services/armazenamento.dart';
 import 'package:aulas_flutter/services/fila_offline.dart';
 import 'package:aulas_flutter/services/rastreamento.dart';
@@ -53,7 +54,6 @@ Map<String, dynamic> viagem() => {
   'vagas_disponiveis': 14,
   'total_ida': 30,
   'total_retorno': 0,
-  'proximo_ponto': null,
   'escolha_aberta': true,
   'escolha_abre_em': '2026-10-18T08:00:00-04:00',
   'pode_iniciar_volta': true,
@@ -102,6 +102,7 @@ Future<void> abrir(WidgetTester t, Widget w, {double largura = 390}) async {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: temaUnibus(),
+        navigatorObservers: [observadorConsultas],
         home: w,
       ),
     ),
@@ -131,10 +132,24 @@ Future<void> salvar(WidgetTester t, String nome) async {
         capturas.currentContext!.findRenderObject() as RenderRepaintBoundary;
     final image = await boundary.toImage();
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    final f = File('tmp/telas/$nome.png');
+    const pasta = String.fromEnvironment('CAPTURAS_DIR', defaultValue: 'tmp/telas');
+    final f = File('$pasta/$nome.png');
     await f.parent.create(recursive: true);
     await f.writeAsBytes(data!.buffer.asUint8List());
     image.dispose();
+  });
+}
+
+void testarTela(String descricao, Future<void> Function(WidgetTester) teste) {
+  testWidgets(descricao, (tester) async {
+    try {
+      await teste(tester);
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await Rastreamento.instancia.parar();
+      FilaOffline.instancia.parar();
+      ApiService.encerrarSessao();
+    }
   });
 }
 
@@ -288,7 +303,7 @@ void main() {
     Rastreamento.instancia.parar();
     ApiService.encerrarSessao();
   });
-  testWidgets('Login aceita RUA, oculta senha e valida campos', (t) async {
+  testarTela('Login aceita RUA, oculta senha e valida campos', (t) async {
     await abrir(t, const Login());
     await salvar(t, '01-login');
     expect(find.text('Acesse sua conta'), findsOneWidget);
@@ -303,7 +318,7 @@ void main() {
     await t.pump();
     expect(t.widget<TextField>(find.byType(TextField).last).obscureText, false);
   });
-  testWidgets('Telas do associado em 390 px e reserva de poltrona', (t) async {
+  testarTela('Telas do associado em 390 px e reserva de poltrona', (t) async {
     await abrir(t, ViagensHoje(usuario: usuario, token: 'teste'));
     await salvar(t, '02-associado-onibus');
     await abrir(t, DetalheAssociado(viagem: atual, token: 'teste'));
@@ -349,7 +364,7 @@ void main() {
     await salvar(t, '08b-associado-pendente');
     await t.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('Painel, contador, QR e conferência do fiscal', (t) async {
+  testarTela('Painel, contador, QR e conferência do fiscal', (t) async {
     final fiscal = {...usuario, 'tipo': 'fiscal', 'nome': 'Carlos Lima'};
     await abrir(t, ViagensHoje(usuario: fiscal, token: 'teste'));
     await salvar(t, '09-fiscal-onibus');
@@ -398,7 +413,7 @@ void main() {
     await salvar(t, '13d-fiscal-proprio');
     await t.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('Etapas do motorista e adaptação a 360 px', (t) async {
+  testarTela('Etapas do motorista e adaptação a 360 px', (t) async {
     final motorista = {...usuario, 'tipo': 'motorista', 'nome': 'João Silva'};
     atual = {
       ...atual,
@@ -445,7 +460,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
     Rastreamento.instancia.parar();
   });
-  testWidgets('Menu da conta contém somente sair', (t) async {
+  testarTela('Menu da conta contém somente sair', (t) async {
     await abrir(t, ViagensHoje(usuario: usuario, token: 'teste'));
     await t.tap(find.byTooltip('Opções da conta'));
     await t.pump(const Duration(milliseconds: 300));
@@ -456,7 +471,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Mapas de 16 e 46 lugares mostram todos sem rolagem em 390x844', (
+  testarTela('Mapas de 16 e 46 lugares mostram todos sem rolagem em 390x844', (
     t,
   ) async {
     for (final capacidade in [16, 46]) {
@@ -479,7 +494,7 @@ void main() {
     }
     await t.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('Escolha exige ponto e continua visível mesmo com GPS', (
+  testarTela('Escolha exige ponto e continua visível mesmo com GPS', (
     t,
   ) async {
     atual = {
@@ -506,7 +521,7 @@ void main() {
     expect(botao().onPressed, isNotNull);
     await t.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('Antes das 08 aviso e escolha desabilitada', (t) async {
+  testarTela('Antes das 08 aviso e escolha desabilitada', (t) async {
     atual = {
       ...viagem(),
       'status': 'agendada',
@@ -525,7 +540,7 @@ void main() {
     await salvar(t, 'v4-antes-abertura');
     await t.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('Ônibus cheio após partida mostra check-in encerrado', (t) async {
+  testarTela('Ônibus cheio após partida mostra check-in encerrado', (t) async {
     atual = {
       ...viagem(),
       'vagas_disponiveis': 0,
@@ -541,7 +556,7 @@ void main() {
     expect(find.byType(OnibusLotado), findsNothing);
     await t.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('Login com senha gerada abre lista sem exigir troca', (t) async {
+  testarTela('Login com senha gerada abre lista sem exigir troca', (t) async {
     await abrir(t, const Login());
     await t.enterText(find.byType(TextField).first, '802.023');
     await t.enterText(find.byType(TextField).last, 'Abc123');
@@ -555,7 +570,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Login ignora sessão antiga e preserva fila do usuário', (
+  testarTela('Login ignora sessão antiga e preserva fila do usuário', (
     t,
   ) async {
     final refresh =
@@ -584,7 +599,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Ações da escolha são exclusivas antes e depois do check-in', (
+  testarTela('Ações da escolha são exclusivas antes e depois do check-in', (
     t,
   ) async {
     await abrir(t, DetalheAssociado(viagem: atual, token: 'teste'));
@@ -619,7 +634,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Cancelar escolha pede confirmação e libera a seleção', (
+  testarTela('Cancelar escolha pede confirmação e libera a seleção', (
     t,
   ) async {
     atual = {
@@ -639,7 +654,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Reserva em outro ônibus oferece apenas trecho disponível', (
+  testarTela('Reserva em outro ônibus oferece apenas trecho disponível', (
     t,
   ) async {
     atual = {
@@ -666,7 +681,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets(
+  testarTela(
     'Ida lotada permite escolher a volta disponível em outro ônibus',
     (t) async {
       atual = {
@@ -701,7 +716,7 @@ void main() {
     },
   );
 
-  testWidgets('Tela de lotação considera todos os trechos permitidos', (
+  testarTela('Tela de lotação considera todos os trechos permitidos', (
     t,
   ) async {
     for (final vagasIda in [0, 5]) {
@@ -722,7 +737,7 @@ void main() {
     await t.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Conflito de escolha continua visível mesmo com ônibus cheio', (
+  testarTela('Conflito de escolha continua visível mesmo com ônibus cheio', (
     t,
   ) async {
     atual = {

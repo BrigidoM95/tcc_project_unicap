@@ -5,10 +5,11 @@ Execute primeiro flutter test --dart-define=CAPTURAR_TELAS=true.
 from html import escape
 from pathlib import Path
 import shutil
+import sys
 from PIL import Image, ImageDraw, ImageFont
 
 raiz = Path(__file__).resolve().parents[1]
-origem = raiz/'tmp/telas'
+origem = Path(sys.argv[1]).resolve() if len(sys.argv)>1 else raiz/'tmp/telas'
 destino = raiz/'docs/previas-mobile'
 destino.mkdir(parents=True, exist_ok=True)
 grupos = {
@@ -30,7 +31,7 @@ html=['''<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="vie
 body{font:16px system-ui,sans-serif;background:#f4f6f9;color:#1b396d;margin:0;padding:32px;max-width:1500px;margin:auto}
 h1{margin-bottom:8px}p{max-width:900px;line-height:1.6}nav{display:flex;gap:12px;flex-wrap:wrap}nav a{background:#1b396d;color:white;padding:10px 18px;border-radius:9px;text-decoration:none}
 .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}figure{margin:0}img{width:100%;max-width:390px;border:1px solid #cdd5e3;border-radius:16px;box-shadow:0 5px 16px #1b396d15;background:white}figcaption{margin:10px 0 24px;font-size:13px}a{color:inherit}section{scroll-margin-top:20px}
-</style><h1>UNICAP — telas implementadas</h1><p>Correções de 26/10/2026. Capturas do Flutter com dados fictícios, feitas nos testes de widgets. Clique para ampliar. O mapa mostra o estado sem localização nesta amostra; na operação usa posições reais. A câmera é simulada pelos testes. A barra de status do aparelho não é simulada.</p><nav>''']
+</style><h1>UNICAP — telas implementadas</h1><p>Atualização de 30/10/2026. Capturas do Flutter com dados fictícios, feitas nos testes de widgets. Clique para ampliar. O mapa mostra o estado sem localização nesta amostra; na operação usa posições reais. A câmera é simulada pelos testes. A barra de status do aparelho não é simulada.</p><nav>''']
 for grupo in grupos:
     html.append(f'<a href="#{grupo}">{grupo}</a>')
 html.append('</nav>')
@@ -51,6 +52,6 @@ for grupo,nomes in grupos.items():
         contato.paste(im,(x+(260-im.width)//2,y+35))
     contato.save(destino/(grupo.lower()+'.png'))
     html.append('</div></section>')
-html.append('<p>Os nomes e horários são exemplos de teste. As correções, testes e limitações estão descritos em <a href="../CORRECOES_2026-10-26.md">CORRECOES_2026-10-26.md</a>.</p></html>')
+html.append('<p>Os nomes e horários são exemplos de teste. As alterações, testes e limites das medições estão descritos em <a href="../OTIMIZACOES_2026-10-30.md">OTIMIZACOES_2026-10-30.md</a>.</p></html>')
 (destino/'index.html').write_text(''.join(html),encoding='utf-8')
 print(f'Galeria com {sum(map(len,grupos.values()))} capturas: {destino}')

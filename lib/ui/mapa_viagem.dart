@@ -153,16 +153,6 @@ class _MapaDaViagemState extends State<MapaDaViagem> {
                 ),
               ),
             ),
-            if (viagem['proximo_ponto'] != null)
-              Positioned(
-                left: 10,
-                right: 10,
-                bottom: 19,
-                child: Etiqueta(
-                  'Próximo ponto: ${viagem['proximo_ponto']}${viagem['previsao_chegada'] != null ? ' • ~ ${hora(viagem['previsao_chegada'])}' : ''}',
-                  icone: Icons.location_on,
-                ),
-              ),
           ],
         ),
       ),

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Despesa, LogAuditoria
+from .models import LogAuditoria
 @admin.register(LogAuditoria)
 class AuditoriaAdmin(admin.ModelAdmin):
     list_display = ('criado_em','usuario','acao','modelo','objeto_id')

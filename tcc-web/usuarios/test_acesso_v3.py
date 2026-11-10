@@ -4,7 +4,6 @@ from rest_framework.test import APIClient
 from embarques.tests import Cenario
 from gestao.models import LogAuditoria
 from .forms import CadastroUsuarioForm, EdicaoUsuarioForm
-from .models import Usuario
 
 
 class AcessoV3Tests(Cenario, TestCase):

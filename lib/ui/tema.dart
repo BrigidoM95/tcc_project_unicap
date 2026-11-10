@@ -79,39 +79,6 @@ ThemeData temaUnibus() => ThemeData(
   ),
 );
 
-class CartaoSecao extends StatelessWidget {
-  final String titulo;
-  final String? descricao;
-  final Widget child;
-  const CartaoSecao({
-    super.key,
-    required this.titulo,
-    this.descricao,
-    required this.child,
-  });
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            titulo,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          if (descricao != null) ...[
-            const SizedBox(height: 8),
-            Text(descricao!),
-          ],
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    ),
-  );
-}
-
 class Aviso extends StatelessWidget {
   final String texto;
   final bool sucesso, informativo;

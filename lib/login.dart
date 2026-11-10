@@ -22,8 +22,8 @@ class _LoginState extends State<Login> {
   @override
   void initState() {
     super.initState();
+    if (Rastreamento.instancia.ativo) unawaited(Rastreamento.instancia.parar());
     FilaOffline.instancia.parar();
-    if (Rastreamento.instancia.ativo) Rastreamento.instancia.parar();
     ApiService.encerrarSessao();
     // Remove credenciais de versões anteriores sem apagar a fila por usuário.
     unawaited(Armazenamento.apagar('sessao').catchError((_) {}));

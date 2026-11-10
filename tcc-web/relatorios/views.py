@@ -36,8 +36,11 @@ def formulario(request):
     return FiltrosRelatorioForm(dados)
 
 
-def pagina(queryset, request, parametro):
-    return Paginator(queryset, 25).get_page(request.GET.get(parametro))
+def pagina(queryset, request, parametro, total=None):
+    paginador=Paginator(queryset,25)
+    if total is not None:
+        paginador.count=total  # O resumo já contou estes mesmos registros filtrados.
+    return paginador.get_page(request.GET.get(parametro))
 
 
 @never_cache
@@ -53,10 +56,11 @@ def painel(request):
         for chave in ("pagina_embarques", "pagina_frequencia", "pagina_viagens"):
             parametros.pop(chave, None)
         viagens = pagina(rel.viagens, request, "pagina_viagens")
+        resumo=rel.resumo
         contexto.update(
-            relatorio=rel, resumo=rel.resumo, parametros=parametros.urlencode(),
-            embarques=pagina(rel.registros, request, "pagina_embarques"),
-            frequencia=pagina(rel.frequencia, request, "pagina_frequencia"),
+            relatorio=rel, resumo=resumo, parametros=parametros.urlencode(),
+            embarques=pagina(rel.registros, request, "pagina_embarques",total=resumo['embarques']),
+            frequencia=pagina(rel.frequencia, request, "pagina_frequencia",total=resumo['associados']),
             viagens=viagens, linhas_viagens=rel.preparar_viagens(viagens),
             por_dia=rel.por_dia,
         )

@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/api_service.dart';
+import '../../services/consulta_visivel.dart';
 import '../../services/fila_offline.dart';
 import '../../ui/componentes.dart';
 import '../../ui/mapa_viagem.dart';
@@ -19,27 +19,22 @@ class DetalheAssociado extends StatefulWidget {
   State<DetalheAssociado> createState() => _DetalheAssociadoState();
 }
 
-class _DetalheAssociadoState extends State<DetalheAssociado> {
+class _DetalheAssociadoState extends EstadoComConsulta<DetalheAssociado> {
+  @override
+  Duration get intervaloConsulta => intervaloDaViagem(v);
+  @override
+  Future<void> consultar() => atualizar();
   late Dados v;
-  Timer? timer;
   String? erro;
   bool buscando = false, cancelando = false;
   @override
   void initState() {
     super.initState();
     v = widget.viagem;
-    atualizar();
-    timer = Timer.periodic(const Duration(seconds: 2), (_) => atualizar());
-  }
-
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
   }
 
   Future<void> atualizar() async {
-    if (buscando) return;
+    if (buscando || !consultaAtiva) return;
     buscando = true;
     try {
       final d = await ApiService.requisicao(
@@ -54,6 +49,7 @@ class _DetalheAssociadoState extends State<DetalheAssociado> {
         });
       }
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
       buscando = false;
@@ -111,6 +107,7 @@ class _DetalheAssociadoState extends State<DetalheAssociado> {
       );
       await atualizar();
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
       if (mounted) setState(() => cancelando = false);
@@ -471,7 +468,11 @@ class SelecionarPoltrona extends StatefulWidget {
   State<SelecionarPoltrona> createState() => _SelecionarPoltronaState();
 }
 
-class _SelecionarPoltronaState extends State<SelecionarPoltrona> {
+class _SelecionarPoltronaState extends EstadoComConsulta<SelecionarPoltrona> {
+  @override
+  Duration get intervaloConsulta => intervaloDaViagem(v);
+  @override
+  Future<void> consultar() => carregar();
   late Dados v;
   List<Dados> assentos = [];
   int? selecionada, pontoIda, pontoVolta;
@@ -479,7 +480,6 @@ class _SelecionarPoltronaState extends State<SelecionarPoltrona> {
   String? erro;
   bool ocupado = false, buscando = false;
   int geracao = 0;
-  Timer? timer;
   final motivo = TextEditingController();
   bool get fiscal => widget.proprioFiscal || widget.passageiro != null;
   bool get idaPartiu =>
@@ -513,13 +513,10 @@ class _SelecionarPoltronaState extends State<SelecionarPoltrona> {
     pontoVolta = escolha?['ponto_volta_id'] as int?;
     motivo.text = widget.motivo ?? '';
     ajustarPontos();
-    carregar();
-    timer = Timer.periodic(const Duration(seconds: 2), (_) => carregar());
   }
 
   @override
   void dispose() {
-    timer?.cancel();
     motivo.dispose();
     super.dispose();
   }
@@ -541,7 +538,7 @@ class _SelecionarPoltronaState extends State<SelecionarPoltrona> {
   }
 
   Future<void> carregar() async {
-    if (buscando) {
+    if (buscando || !consultaAtiva) {
       return;
     }
     buscando = true;
@@ -572,6 +569,7 @@ class _SelecionarPoltronaState extends State<SelecionarPoltrona> {
         });
       }
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
       buscando = false;
@@ -668,6 +666,7 @@ class _SelecionarPoltronaState extends State<SelecionarPoltrona> {
         }
       }
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
       await carregar();
     } finally {
@@ -1344,7 +1343,10 @@ class _OnibusLotadoState extends State<OnibusLotado> {
                 child: Cartao(
                   child: Row(
                     children: [
-                      SizedBox(width: 65, child: FotoOnibus(a, altura: 48)),
+                      SizedBox(
+                        width: 65,
+                        child: FotoOnibus(a, altura: 48, miniatura: true),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(

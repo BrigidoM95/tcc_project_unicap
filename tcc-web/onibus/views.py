@@ -1,13 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 
 from rest_framework import status
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,16 +17,13 @@ from .forms import OnibusForm
 from .models import Onibus
 from .serializers import OnibusSerializer
 
-class AdministradorOuSomenteLeitura(BasePermission):
+class SomenteAdministrador(BasePermission):
     def has_permission(self, request, view):
         if not request.user:
             return False
 
         if not request.user.is_authenticated:
             return False
-
-        if request.method in SAFE_METHODS:
-            return True
 
         return eh_administrador(request.user)
 
@@ -97,15 +94,11 @@ def listar_onibus(request):
         "codigo"
     )
 
-    total = Onibus.objects.count()
-
-    total_ativos = Onibus.objects.filter(
-        status=Onibus.Status.ATIVO
-    ).count()
-
-    total_inativos = Onibus.objects.filter(
-        status=Onibus.Status.INATIVO
-    ).count()
+    totais = Onibus.objects.aggregate(
+        total=Count('pk'),
+        total_ativos=Count('pk',filter=Q(status=Onibus.Status.ATIVO)),
+        total_inativos=Count('pk',filter=Q(status=Onibus.Status.INATIVO)),
+    )
 
     pagina = Paginator(queryset,25).get_page(request.GET.get('pagina'))
     parametros = request.GET.copy(); parametros.pop('pagina',None)
@@ -114,9 +107,7 @@ def listar_onibus(request):
         "objetos": pagina, "parametros": parametros.urlencode(),
         "busca": busca,
         "filtro_status": filtro_status,
-        "total": total,
-        "total_ativos": total_ativos,
-        "total_inativos": total_inativos,
+        **totais,
     }
 
     return render(
@@ -310,7 +301,7 @@ def alterar_status_onibus(
 class OnibusListaApiView(APIView):
 
     permission_classes = [
-        AdministradorOuSomenteLeitura
+        SomenteAdministrador
     ]
 
     def get(self, request):
@@ -385,7 +376,7 @@ class OnibusListaApiView(APIView):
 class OnibusDetalheApiView(APIView):
 
     permission_classes = [
-        AdministradorOuSomenteLeitura
+        SomenteAdministrador
     ]
 
     def get_object(
@@ -508,7 +499,7 @@ class OnibusDetalheApiView(APIView):
 class DesativarOnibusApiView(APIView):
 
     permission_classes = [
-        AdministradorOuSomenteLeitura
+        SomenteAdministrador
     ]
 
     def post(
@@ -543,7 +534,7 @@ class DesativarOnibusApiView(APIView):
 class ReativarOnibusApiView(APIView):
 
     permission_classes = [
-        AdministradorOuSomenteLeitura
+        SomenteAdministrador
     ]
 
     def post(

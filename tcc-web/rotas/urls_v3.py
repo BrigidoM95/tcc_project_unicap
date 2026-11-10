@@ -9,7 +9,6 @@ urlpatterns = [
     path('api/viagens/<int:viagem_id>/assentos/',api.AssentosApi.as_view()),
     path('api/viagens/<int:viagem_id>/reservas/',api.ReservasApi.as_view()),
     path('api/viagens/<int:viagem_id>/minha-escolha/',api.CancelarEscolhaApi.as_view()),
-    path('api/reservas/<int:reserva_id>/',api.CancelarReservaApi.as_view()),
     path('api/viagens/<int:viagem_id>/qr-do-dia/',api.QrApi.as_view()),
     path('api/viagens/<int:viagem_id>/embarques/',api.EmbarquesApi.as_view()),
     path('api/viagens/<int:viagem_id>/associados/',api.BuscarAssociadosApi.as_view()),

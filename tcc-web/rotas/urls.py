@@ -3,10 +3,6 @@ from django.urls import path
 from . import views
 from .mapa import mapa, MapaApi, DetalheMapaApi
 
-from .api_v3 import (HojeApi as PainelMotoristaApi, LegadoDesativadoApi as IniciarViagemApi,
-    LegadoDesativadoApi as FinalizarViagemApi, LegadoDesativadoApi as EnviarLocalizacaoApi)
-
-
 urlpatterns = [
     path('mapa/', mapa, name='mapa'),
     path('api/mapa/', MapaApi.as_view(), name='api_mapa'),
@@ -45,25 +41,5 @@ urlpatterns = [
         "rotas/<int:rota_id>/pontos/<int:ponto_id>/editar/",
         views.editar_ponto,
         name="editar_ponto",
-    ),
-    path(
-        "api/viagens/painel/",
-        PainelMotoristaApi.as_view(),
-        name="api_painel_motorista",
-    ),
-    path(
-        "api/viagens/iniciar/",
-        IniciarViagemApi.as_view(),
-        name="api_iniciar_viagem",
-    ),
-    path(
-        "api/viagens/<int:viagem_id>/finalizar/",
-        FinalizarViagemApi.as_view(),
-        name="api_finalizar_viagem",
-    ),
-     path(
-        "api/viagens/<int:viagem_id>/localizacao/",
-        EnviarLocalizacaoApi.as_view(),
-        name="api_enviar_localizacao",
     ),
 ]

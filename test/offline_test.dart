@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -10,10 +11,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final fila = FilaOffline.instancia;
   var offline = true, recusar = false, envios = 0;
+  Completer<http.Response>? envioPendente;
   setUp(() async {
     offline = true;
     recusar = false;
     envios = 0;
+    envioPendente = null;
     ApiService.usarClienteTeste(
       MockClient((r) async {
         if (r.url.path == '/api/login/') {
@@ -26,6 +29,7 @@ void main() {
             200,
           );
         }
+        if (envioPendente != null) return envioPendente!.future;
         if (offline) throw http.ClientException('Sem rede');
         envios++;
         return http.Response(
@@ -97,15 +101,64 @@ void main() {
     await fila.iniciar('access', '1');
     expect(fila.itens.length, 1);
   });
-  test('GPS agrupa até 200 posições e remove lote confirmado', () async {
-    for (var i = 0; i < 201; i++) {
-      await fila.posicao(1, {'capturada_em': 'hora-$i'});
-    }
-    expect(fila.itens.length, 2);
-    expect((fila.itens.first['corpo']['posicoes'] as List).length, 200);
-    offline = false;
-    await fila.sincronizar();
+  test(
+    'GPS guarda lotes somente ao falhar e remove após sincronização',
+    () async {
+      await fila.enviarGps(
+        1,
+        List.generate(200, (i) => {'capturada_em': 'hora-$i'}),
+      );
+      await fila.enviarGps(1, [
+        {'capturada_em': 'hora-200'},
+      ]);
+      expect(fila.itens.length, 2);
+      expect((fila.itens.first['corpo']['posicoes'] as List).length, 200);
+      offline = false;
+      await fila.sincronizar();
+      expect(fila.itens, isEmpty);
+      expect(envios, 2);
+    },
+  );
+  test(
+    'GPS online não grava fila e falha preserva check-in existente',
+    () async {
+      offline = false;
+      await fila.enviarGps(1, [
+        {'capturada_em': 'hora-1'},
+      ]);
+      expect(await Armazenamento.ler('fila.1'), isNull);
+      offline = true;
+      await adicionar();
+      await fila.enviarGps(1, [
+        {'capturada_em': 'hora-2'},
+      ]);
+      final salvos = await Armazenamento.ler('fila.1') as List;
+      expect(salvos.map((e) => e['tipo']), containsAll(['checkin', 'gps']));
+    },
+  );
+
+  test('Suspensão protege GPS em trânsito e remove ao confirmar', () async {
+    envioPendente = Completer<http.Response>();
+    final envio = fila.enviarGps(1, [
+      {'capturada_em': 'hora-em-transito'},
+    ]);
+    await Future<void>.delayed(Duration.zero);
+    expect(await Armazenamento.ler('fila.1'), isNull);
+    await fila.protegerGpsEmEnvio();
+    expect((await Armazenamento.ler('fila.1') as List).single['tipo'], 'gps');
+    envioPendente!.complete(
+      http.Response(
+        jsonEncode({
+          'aceitas': 1,
+          'repetidas': 0,
+          'descartadas': 0,
+          'motivos': [],
+        }),
+        200,
+      ),
+    );
+    expect((await envio)['estado'], 'confirmado');
+    expect(await Armazenamento.ler('fila.1'), isEmpty);
     expect(fila.itens, isEmpty);
-    expect(envios, 2);
   });
 }

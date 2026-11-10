@@ -7,8 +7,9 @@ from datetime import datetime, time, timedelta
 from django.conf import settings
 
 from django.core import signing
-from django.db import transaction
-from django.db.models import F, Q
+from django.core.cache import cache
+from django.db import connection, transaction
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import APIException, PermissionDenied
@@ -33,7 +34,8 @@ def perfil(user):
 
 
 def consulta_viagens(p):
-    qs = Viagem.objects.select_related('rota', 'onibus', 'motorista__user', 'fiscal__user').prefetch_related('rota__pontos', 'rota__instituicoes')
+    qs = Viagem.objects.select_related('rota__onibus__motorista__user', 'rota__fiscal__user',
+        'onibus', 'motorista__user', 'fiscal__user').prefetch_related('rota__pontos', 'rota__instituicoes')
     if p.tipo == 'motorista':
         return qs.filter(Q(etapa='agendada', rota__onibus__motorista=p) | (~Q(etapa='agendada') & Q(motorista=p)))
     if p.tipo == 'fiscal':
@@ -76,7 +78,8 @@ def exigir_passageiro(p, v):
 
 def bloquear(pk):
     # A escrita inicial também serializa concorrência no SQLite.
-    Viagem.objects.filter(pk=pk).update(status=F('status'))
+    if connection.vendor == 'sqlite':
+        Viagem.objects.filter(pk=pk).update(status=F('status'))
     v = get_object_or_404(Viagem.objects.select_for_update(of=('self',)).select_related('rota', 'onibus', 'fiscal__user', 'motorista__user'), pk=pk)
     # Uma viagem ainda não iniciada segue os vínculos atuais do painel.
     # Depois do início, preserva o responsável registrado na operação.
@@ -98,22 +101,41 @@ def data_operacional(agora=None):
 def gerar_viagens(data=None):
     data = data or data_operacional()
     criadas = 0
-    for r in Rota.objects.filter(status='ativa', onibus__status='ativo', onibus__motorista__user__is_active=True).select_related('onibus'):
+    existentes = {v.rota_id:v for v in Viagem.objects.filter(data_servico=data, ciclo_completo=True)}
+    rotas = Rota.objects.filter(status='ativa', onibus__status='ativo',
+        onibus__motorista__user__is_active=True, pontos__ativo=True,
+        instituicoes__isnull=False).select_related('onibus').distinct()
+    for r in rotas:
         if data.weekday() not in (r.dias_operacao or range(7)):
             continue
-        # Rotas antigas incompletas ficam disponíveis para correção no painel.
-        if not r.pontos.filter(ativo=True).exists() or not r.instituicoes.exists():
-            continue
-        v, nova = Viagem.objects.get_or_create(rota=r, data_servico=data, ciclo_completo=True,
-            defaults={'onibus': r.onibus, 'motorista': r.onibus.motorista, 'fiscal': r.fiscal,
+        v = existentes.get(r.pk)
+        nova = False
+        if v is None:
+            v, nova = Viagem.objects.get_or_create(rota=r, data_servico=data, ciclo_completo=True,
+            defaults={'onibus': r.onibus, 'motorista_id': r.onibus.motorista_id, 'fiscal_id': r.fiscal_id,
                       'sentido': 'ida', 'status': 'agendada', 'etapa': 'agendada'})
         criadas += nova
-        if not nova:
-            Viagem.objects.filter(pk=v.pk, etapa='agendada', status='agendada').update(
-                onibus_id=r.onibus_id, motorista_id=r.onibus.motorista_id, fiscal_id=r.fiscal_id,
-                capacidade_registrada=r.onibus.capacidade, nome_rota_registrado=r.nome,
-                codigo_onibus_registrado=r.onibus.codigo or '', placa_onibus_registrada=r.onibus.placa)
+        if not nova and v.etapa == 'agendada' and v.status == 'agendada':
+            valores = dict(onibus_id=r.onibus_id, motorista_id=r.onibus.motorista_id,
+                fiscal_id=r.fiscal_id, capacidade_registrada=r.onibus.capacidade,
+                nome_rota_registrado=r.nome, codigo_onibus_registrado=r.onibus.codigo or '',
+                placa_onibus_registrada=r.onibus.placa)
+            if any(getattr(v, campo) != valor for campo, valor in valores.items()):
+                Viagem.objects.filter(pk=v.pk, etapa='agendada', status='agendada').update(**valores)
     return criadas
+
+
+def atualizar_operacao_se_necessario():
+    """Fallback quando o serviço não está ativo, no máximo uma vez por minuto."""
+    chave = f'operacao:atualizacao:{data_operacional()}'
+    if cache.get(chave) or not cache.add(chave, True, 60):
+        return
+    try:
+        encerrar_antigas()
+        gerar_viagens()
+    except Exception:
+        cache.delete(chave)
+        raise
 
 
 def encerrar_antigas():
@@ -277,29 +299,74 @@ def reservas_do_dia(v, p):
 
 def bloquear_passageiro(p):
     # Mesmo passageiro não pode reservar/embarcar simultaneamente em dois ônibus.
-    Usuario.objects.filter(pk=p.pk).update(rua=F('rua'))
+    if connection.vendor == 'sqlite':
+        Usuario.objects.filter(pk=p.pk).update(rua=F('rua'))
     Usuario.objects.select_for_update().get(pk=p.pk)
 
 
-def dados_viagem(v, p=None, sentido=None):
+def preparar_dados_viagens(viagens, p=None):
+    """Leituras agrupadas por requisição; nunca reutilizadas para validar escritas."""
+    ids = [v.pk for v in viagens]
+    agora = timezone.now()
+    if not ids:
+        return {}
+    contagens = {(r['viagem_id'],r['sentido']):r['total'] for r in CheckIn.objects.filter(
+        viagem_id__in=ids,cancelado_em__isnull=True).order_by().values('viagem_id','sentido').annotate(total=Count('pk'))}
+    reservadas = {(r['viagem_id'],r['sentido']):r['total'] for r in ReservaAssento.objects.filter(
+        viagem_id__in=ids,ativa=True,expira_em__gt=agora).order_by().values('viagem_id','sentido').annotate(total=Count('pk'))}
+    ultima = LocalizacaoViagem.objects.filter(viagem_id=OuterRef('pk')).order_by('-capturada_em','-pk')
+    ultimas_ids = Viagem.objects.filter(pk__in=ids).order_by().annotate(ultima=Subquery(ultima.values('pk')[:1])).values('ultima')
+    locais = {r.viagem_id:r for r in LocalizacaoViagem.objects.filter(pk__in=Subquery(ultimas_ids))}
+    pessoais, escolhas = [], []
+    if p and p.tipo != 'motorista':
+        dias = {v.data_servico for v in viagens}
+        pessoais = list(CheckIn.objects.filter(associado=p,data_servico__in=dias,
+            cancelado_em__isnull=True).select_related('viagem__rota','viagem__onibus'))
+        escolhas = list(ReservaAssento.objects.filter(associado=p,viagem__data_servico__in=dias)
+            .select_related('ponto','viagem__onibus').order_by('pk'))
+    return {'agora':agora,'contagens':contagens,'reservadas':reservadas,'locais':locais,
+            'checkins':pessoais,'escolhas':escolhas}
+
+
+def escolha_preparada(v, contexto):
+    todas = [r for r in contexto['escolhas'] if r.viagem_id == v.pk]
+    escolhidas = {r.sentido:r for r in todas if r.ativa and r.expira_em > contexto['agora']}
+    for c in contexto['checkins']:
+        if c.viagem_id == v.pk:
+            r = next((r for r in reversed(todas) if r.sentido == c.sentido and r.assento == c.vaga), None)
+            if r: escolhidas[c.sentido] = r
+    if not escolhidas: return None
+    ida, volta = escolhidas.get('ida'), escolhidas.get('retorno')
+    r = volta or ida
+    return {'trajeto':'ida_volta' if ida and volta else 'ida' if ida else 'volta','poltrona':r.assento,
+        'ponto_ida_id':ida.ponto_id if ida else None,'ponto_ida_nome':ida.ponto.nome if ida and ida.ponto_id else None,
+        'ponto_volta_id':volta.ponto_id if volta else None,'ponto_volta_nome':volta.ponto.nome if volta and volta.ponto_id else None}
+
+
+def dados_viagem(v, p=None, sentido=None, *, trajeto=True, contexto=None):
+    if v.etapa == 'agendada':
+        aplicar_vinculos_agendados(v)
+    contexto = contexto or preparar_dados_viagens([v],p)
     sentido = sentido or v.sentido_atual
-    presentes = registros(v, sentido).count()
-    reservadas = reservas(v, sentido).count() if escolha_aberta(v, sentido) else 0
+    abertas = {s:escolha_aberta(v,s,contexto['agora']) for s in ('ida','retorno')}
+    totais = {s:contexto['contagens'].get((v.pk,s),0) for s in ('ida','retorno')}
+    totais_reservas = {s:contexto['reservadas'].get((v.pk,s),0) if abertas[s] else 0 for s in ('ida','retorno')}
+    presentes, reservadas = totais[sentido], totais_reservas[sentido]
     capacidade = v.capacidade_embarque
-    pontos = list(v.rota.pontos.filter(ativo=True).order_by('sentido','ordem'))
-    ultima = v.localizacoes.order_by('-capturada_em').first()
+    pontos = sorted((x for x in v.rota.pontos.all() if x.ativo),key=lambda x:(x.sentido,x.ordem,x.pk))
+    ultima = contexto['locais'].get(v.pk)
     localizacao = None
     if ultima:
         localizacao = {'latitude':float(ultima.latitude), 'longitude':float(ultima.longitude),
             'precisao_metros':float(ultima.precisao_metros) if ultima.precisao_metros is not None else None,
             'capturada_em':ultima.capturada_em.isoformat(), 'atrasada':(timezone.now()-ultima.capturada_em).total_seconds()>120}
     from .progresso import progresso
-    andamento = progresso(v,pontos,sentido)
+    andamento = progresso(v) if trajeto else {'trajeto_percorrido':[]}
     foto = v.onibus.foto_url
     liberada = timezone.make_aware(datetime.combine(v.data_servico, v.rota.horario_ida))-timedelta(minutes=60)
     dados = {'id':v.pk, 'rota_id':v.rota_id, 'rota_nome':v.nome_rota_historico,
         'destino':v.rota.destino, 'onibus_id':v.onibus_id, 'onibus_nome':v.onibus.nome,
-        'onibus_codigo':v.onibus.codigo, 'placa':v.onibus.placa, 'foto':foto, 'motorista_nome':str(v.motorista),
+        'onibus_codigo':v.onibus.codigo, 'placa':v.onibus.placa, 'foto':foto, 'miniatura':v.onibus.miniatura_url, 'motorista_nome':str(v.motorista),
         'fiscal_id':v.fiscal_id, 'fiscal_nome':str(v.fiscal) if v.fiscal_id else None,
         'status':v.status, 'etapa':v.etapa, 'etapa_nome':v.get_etapa_display(), 'sentido':sentido,
         'data':v.data_servico.isoformat(), 'horario_ida':v.rota.horario_ida.strftime('%H:%M'),
@@ -308,32 +375,35 @@ def dados_viagem(v, p=None, sentido=None):
         'escolha_aberta':escolha_aberta(v,sentido), 'escolha_abre_em':timezone.localtime(escolha_abre_em(v)).isoformat(),
         'pode_iniciar_volta':v.etapa=='no_destino', 'embarque_aberto':v.embarque_aberto(sentido), 'capacidade':capacidade, 'presentes':presentes,
         'reservados':reservadas, 'ocupados':presentes+reservadas, 'vagas_disponiveis':max(0,capacidade-presentes-reservadas),
-        'vagas_por_sentido':{direcao:max(0, capacidade-registros(v,direcao).count()
-            -(reservas(v,direcao).count() if escolha_aberta(v,direcao) else 0)) for direcao in ('ida','retorno')},
-        'total_ida':registros(v,'ida').count(), 'total_retorno':registros(v,'retorno').count(),
-        'localizacao':localizacao, 'proximo_ponto':andamento['proximo_ponto'],
-        'previsao_chegada':andamento['previsao_chegada'], 'previsao_metodo':andamento['previsao_metodo'],
+        'vagas_por_sentido':{s:max(0,capacidade-totais[s]-totais_reservas[s]) for s in ('ida','retorno')},
+        'total_ida':totais['ida'], 'total_retorno':totais['retorno'],
+        'localizacao':localizacao,
         'trajeto_percorrido':andamento['trajeto_percorrido'],
-        'pontos':[{'id':x.pk,'nome':x.nome,'ordem':x.ordem,'sentido':x.sentido,
-                   'passou_em':andamento['passagens'].get(x.pk)} for x in pontos],
+        'pontos':[{'id':x.pk,'nome':x.nome,'ordem':x.ordem,'sentido':x.sentido} for x in pontos],
         'encerrada_pelo_sistema':v.encerrada_pelo_sistema, 'atualizado_em':timezone.now().isoformat()}
     for campo in ['iniciada_em','partida_ida_em','chegada_em','partida_volta_em','finalizada_em']:
         valor = getattr(v,campo)
         dados[campo] = valor.isoformat() if valor and (campo!='iniciada_em' or v.etapa!='agendada') else None
     if p:
-        c = v.checkins.filter(associado=p,sentido=sentido,cancelado_em__isnull=True).select_related('viagem__rota','viagem__onibus').first()
-        r = reservas(v,sentido).filter(associado=p).first()
+        c = next((c for c in contexto['checkins'] if c.viagem_id == v.pk and c.sentido == sentido),None)
+        r = next((r for r in contexto['escolhas'] if r.viagem_id == v.pk and r.sentido == sentido and r.ativa and r.expira_em > contexto['agora']),None)
         dados['meu_embarque'] = dados_registro(c) if c else None
         dados['minha_reserva'] = dados_reserva(r) if r and escolha_aberta(v,sentido) else None
-        dados['minha_escolha'] = minha_escolha(v,p)
+        dados['minha_escolha'] = escolha_preparada(v,contexto)
         disponiveis, bloqueios = [], {}
-        for trajeto in ('ida', 'volta', 'ida_volta'):
+        erros_sentido = {}
+        for direcao in ('ida','retorno'):
             try:
-                for direcao in sentidos_trajeto(trajeto):
-                    validar_escolha(v, direcao)
-                    validar_direcao_disponivel(v, p, direcao)
+                validar_escolha(v,direcao)
+                if any(c.sentido == direcao and c.data_servico == v.data_servico for c in contexto['checkins']):
+                    nome = 'ida' if direcao == 'ida' else 'volta'
+                    raise Regra(f'Você já realizou check-in de {nome} hoje. A escolha desse sentido está bloqueada.')
+                validar_reserva_outro_onibus(v,p,direcao,escolhas=contexto['escolhas'])
             except Regra as exc:
-                bloqueios[trajeto] = str(exc.detail)
+                erros_sentido[direcao] = str(exc.detail)
+        for trajeto in ('ida', 'volta', 'ida_volta'):
+            erro = next((erros_sentido[s] for s in sentidos_trajeto(trajeto) if s in erros_sentido),None)
+            if erro: bloqueios[trajeto] = erro
             else:
                 disponiveis.append(trajeto)
         dados['trajetos_disponiveis'] = disponiveis
@@ -351,9 +421,13 @@ def duplicado(p, v, sentido):
     return CheckIn.objects.filter(associado=p, data_servico=v.data_servico, sentido=sentido, cancelado_em__isnull=True).select_related('viagem__rota','viagem__onibus').first()
 
 
-def validar_reserva_outro_onibus(v, p, sentido):
-    outra = ReservaAssento.objects.filter(associado=p, ativa=True, expira_em__gt=timezone.now(),
-        viagem__data_servico=v.data_servico, sentido=sentido).exclude(viagem=v).select_related('viagem__onibus').first()
+def validar_reserva_outro_onibus(v, p, sentido, *, escolhas=None):
+    if escolhas is None:
+        outra = ReservaAssento.objects.filter(associado=p, ativa=True, expira_em__gt=timezone.now(),
+            viagem__data_servico=v.data_servico, sentido=sentido).exclude(viagem=v).select_related('viagem__onibus').first()
+    else:
+        outra = next((r for r in escolhas if r.viagem_id != v.pk and r.viagem.data_servico == v.data_servico
+            and r.sentido == sentido and r.ativa and r.expira_em > timezone.now()),None)
     if outra:
         direcao = 'ida' if sentido == 'ida' else 'volta'
         raise Regra(f'Você já reservou a {direcao} no ônibus {outra.viagem.onibus.nome}. '

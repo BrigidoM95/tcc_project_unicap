@@ -32,13 +32,14 @@ INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
     'rest_framework', 'rest_framework_simplejwt.token_blacklist', 'corsheaders',
-    'paginas', 'usuarios', 'onibus', 'rotas', 'embarques', 'relatorios', 'associados', 'gestao',
+    'paginas', 'usuarios', 'onibus', 'rotas', 'embarques', 'relatorios', 'gestao',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware', 'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware', 'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'gestao.sessoes.RenovacaoSessaoMiddleware',
     'gestao.auditoria.AuditoriaMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware', 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -105,5 +106,8 @@ try:
 except ValueError as exc:
     raise ImproperlyConfigured('RESERVA_ABRE_AS deve ser um horário como 08:00.') from exc
 SESSION_COOKIE_AGE = 1800
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_SAVE_EVERY_REQUEST = False
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# Política definida pelo responsável: GPS por 1 ano e auditoria por 2 anos.
+RETENCAO_GPS_DIAS = 365
+RETENCAO_AUDITORIA_DIAS = 730

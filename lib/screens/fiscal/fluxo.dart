@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import '../../services/api_service.dart';
+import '../../services/consulta_visivel.dart';
 import '../../services/armazenamento.dart';
 import '../../ui/componentes.dart';
 import '../../ui/tema.dart';
@@ -25,7 +26,11 @@ class FluxoFiscal extends StatefulWidget {
   State<FluxoFiscal> createState() => _FluxoFiscalState();
 }
 
-class _FluxoFiscalState extends State<FluxoFiscal> {
+class _FluxoFiscalState extends EstadoComConsulta<FluxoFiscal> {
+  @override
+  Duration get intervaloConsulta => intervaloDaViagem(v);
+  @override
+  Future<void> consultar() => atualizar();
   late Dados v;
   late int tela;
   List<Dados> checkins = [], encontrados = [], assentos = [];
@@ -35,20 +40,17 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
   int? poltrona, pontoId;
   bool ocupado = false, buscando = false, porPonto = false;
   String? sentidoConferencia;
-  Timer? timer, debounce;
+  Timer? debounce;
   int buscaVersao = 0;
   @override
   void initState() {
     super.initState();
     v = widget.viagem;
     tela = widget.telaInicial;
-    atualizar();
-    timer = Timer.periodic(const Duration(seconds: 2), (_) => atualizar());
   }
 
   @override
   void dispose() {
-    timer?.cancel();
     debounce?.cancel();
     busca.dispose();
     motivo.dispose();
@@ -78,7 +80,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
 
   String get sentido => sentidoConferencia ?? '${v['sentido']}';
   Future<void> atualizar() async {
-    if (buscando) return;
+    if (buscando || !consultaAtiva) return;
     buscando = true;
     try {
       final d = await ApiService.requisicao(
@@ -101,6 +103,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
         });
       }
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
       buscando = false;
@@ -127,6 +130,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
       }
       await manterTela();
     } catch (e) {
+      falhaConsulta(e);
       final salvo = await Armazenamento.ler(chave);
       if (ApiService.falhaTemporaria(e) &&
           salvo is Map &&
@@ -163,6 +167,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
     debounce?.cancel();
     final versao = ++buscaVersao;
     debounce = Timer(const Duration(milliseconds: 300), () async {
+      if (!consultaAtiva) return;
       if (valor.trim().length < 3) {
         if (mounted) setState(() => encontrados = []);
         return;
@@ -176,6 +181,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
           setState(() => encontrados = mapas(d['associados']));
         }
       } catch (e) {
+        falhaConsulta(e);
         if (mounted) setState(() => erro = ApiService.mensagemErro(e));
       }
     });
@@ -213,6 +219,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
         });
       }
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     }
   }
@@ -241,6 +248,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
       mudar(3);
       pesquisar(busca.text);
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
       if (mounted) setState(() => ocupado = false);
@@ -286,6 +294,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
       );
       await atualizar();
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     }
   }
@@ -303,7 +312,7 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
     ][tela];
     final subtitulo = [
       '${v['onibus_nome']} • para ${v['destino']}',
-      '${v['onibus_nome']} • próximo ponto: ${v['proximo_ponto'] ?? 'não informado'}',
+      '${v['onibus_nome']} • ${sentidoNome(v['sentido'])}',
       '${sentidoNome(v['sentido'])} • ${v['onibus_nome']} • fiscal ${widget.usuario['nome']}',
       'Busque por nome ou RUA',
       'Check-in manual • ${sentidoNome(v['sentido'])} • ${v['onibus_nome']}',
@@ -389,7 +398,10 @@ class _FluxoFiscalState extends State<FluxoFiscal> {
   List<Widget> painel() => [
     Row(
       children: [
-        SizedBox(width: 114, child: FotoOnibus(v, altura: 100)),
+        SizedBox(
+          width: 114,
+          child: FotoOnibus(v, altura: 100, miniatura: true),
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

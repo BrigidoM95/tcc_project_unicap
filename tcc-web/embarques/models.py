@@ -6,7 +6,6 @@ class SessaoEmbarque(models.Model):
     viagem = models.ForeignKey('rotas.Viagem', on_delete=models.PROTECT, related_name='sessoes_embarque')
     fiscal = models.ForeignKey('usuarios.Usuario', on_delete=models.PROTECT)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    codigo_curto = models.CharField(max_length=6, unique=True, null=True, blank=True, editable=False)
     sentido = models.CharField(max_length=10, default='ida')
     data_servico = models.DateField(null=True)
     gerado_em = models.DateTimeField(default=timezone.now)

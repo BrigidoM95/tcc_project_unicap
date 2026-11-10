@@ -5,7 +5,7 @@ from django.db.models import Sum
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, CondPageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 def gerar_despesas_pdf(despesas,filtros):
     out = BytesIO();styles = getSampleStyleSheet()

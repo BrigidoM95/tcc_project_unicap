@@ -5,6 +5,7 @@
   const map = L.map('mapa').setView([-22.63, -54.82], 12);
   const layer = L.featureGroup().addTo(map);
   let dados, tiles, ocupado = false, primeira = true, geracao = 0;
+  const percursos = new Map();
   const aviso = txt => { status.textContent = txt; };
   const texto = txt => { const el = document.createElement('span'); el.textContent = txt; return el; };
   async function json(url) {
@@ -20,9 +21,14 @@
     const versao = ++geracao, valor = select.value;
     let rota, viagem, trajeto = [];
     if (valor.startsWith('v:')) {
-      const d = await json('/api/mapa/viagens/' + valor.slice(2) + '/');
+      const anterior = percursos.get(valor);
+      const d = await json('/api/mapa/viagens/' + valor.slice(2) + '/' + (anterior ? '?apos=' + anterior.cursor : ''));
       if (versao !== geracao) return;
       ({rota,viagem,trajeto}=d);
+      const porId = new Map((anterior?.pontos || []).map(p => [p.id,p]));
+      for (const p of trajeto) porId.set(p.id,p);
+      trajeto = [...porId.values()].sort((a,b) => a.capturada_em.localeCompare(b.capturada_em) || a.id-b.id).slice(-d.limite_trajeto);
+      percursos.set(valor,{cursor:d.cursor,pontos:trajeto});
     } else rota = dados.rotas.find(r => String(r.id) === valor.slice(2));
     layer.clearLayers();
     document.getElementById('pontos-mapa').replaceChildren();
@@ -44,6 +50,7 @@
         msg += ` · Último GPS: ${hora}` + (loc.desatualizada ? ' · LOCALIZAÇÃO DESATUALIZADA' : '');
         msg += loc.precisao_metros != null ? ` · Precisão estimada: ${loc.precisao_metros} m` : '';
         if(loc.precisao_metros > 10) msg += ' · Posição aproximada';
+        if(loc.velocidade_kmh != null) msg += ` · Velocidade registrada: ${loc.velocidade_kmh} km/h`;
         L.circleMarker([loc.latitude,loc.longitude],{radius:13,color:loc.desatualizada?'#657386':'#ad4700',fillOpacity:1,weight:3}).bindPopup(texto('Ônibus '+viagem.onibus_codigo+' · '+hora)).addTo(layer);
         if(loc.precisao_metros) L.circle([loc.latitude,loc.longitude],{radius:loc.precisao_metros,color:'#ad4700',weight:1,fillOpacity:.08}).addTo(layer);
       } else msg += ' · Aguardando GPS do motorista.';
@@ -59,6 +66,7 @@
     ocupado=true;
     try {
       dados=await json('/api/mapa/');
+      for(const id of percursos.keys()) if(!dados.viagens.some(v => id === `v:${v.id}`)) percursos.delete(id);
       if(!tiles) {
         const attr=document.createElement('a');attr.href=dados.mapa.atribuicao_url;attr.textContent=dados.mapa.atribuicao;
         tiles=L.tileLayer(dados.mapa.tiles,{maxZoom:19,attribution:attr.outerHTML}).addTo(map);

@@ -370,10 +370,21 @@ class Etiqueta extends StatelessWidget {
 class FotoOnibus extends StatelessWidget {
   final Dados viagem;
   final double altura;
-  const FotoOnibus(this.viagem, {super.key, this.altura = 138});
+  final bool miniatura;
+  const FotoOnibus(
+    this.viagem, {
+    super.key,
+    this.altura = 138,
+    this.miniatura = false,
+  });
   @override
   Widget build(BuildContext context) {
-    final url = ApiService.tratarUrlImagem(viagem['foto']?.toString());
+    final reduzida = viagem['miniatura']?.toString();
+    final url = ApiService.tratarUrlImagem(
+      miniatura && reduzida != null && reduzida.isNotEmpty
+          ? reduzida
+          : viagem['foto']?.toString(),
+    );
     Widget fallback() => Image.asset(
       'assets/onibus_referencia.png',
       height: altura,
@@ -384,6 +395,11 @@ class FotoOnibus extends StatelessWidget {
         : Image.network(
             url,
             height: altura,
+            cacheWidth: miniatura
+                ? 320
+                : (MediaQuery.sizeOf(context).width *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round(),
             fit: BoxFit.contain,
             errorBuilder: (_, e, s) => fallback(),
           );

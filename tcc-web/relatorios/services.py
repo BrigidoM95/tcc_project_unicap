@@ -6,11 +6,11 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Count, Max, Min, OuterRef, Q, Subquery, Value
 from django.db.models.functions import TruncDate, Coalesce, NullIf
-from django.utils import timezone
 from django.utils.functional import cached_property
 
 from embarques.models import CheckIn
 from rotas.models import Viagem
+from usuarios.models import Usuario
 
 
 def fuso_relatorios():
@@ -66,14 +66,24 @@ class RelatorioEmbarques:
 
     @cached_property
     def frequencia(self):
-        # Agrupa pelo identificador, nunca pelo nome, que pode ter sido alterado.
-        ultimo = self.registros.filter(associado_id=OuterRef("associado_id"))
-        return self.registros.order_by().values("associado_id", instituicao=models.F('associado__curso__instituicao__nome')).annotate(
+        # A consulta externa tem uma linha por pessoa. As subconsultas usam o
+        # índice de associado, sem repetir nomes/subconsultas no GROUP BY de cada embarque.
+        pessoas = self.registros.order_by().values('associado_id')
+        ultimo = self.registros.filter(associado_id=OuterRef('pk'))
+        totais = ultimo.order_by().values('associado_id').annotate(
+            embarques=Count('pk'),
+            dias=Count(TruncDate('ocorrido_em',tzinfo=self.fuso),distinct=True),
+            primeira=Min('ocorrido_em'),ultima=Max('ocorrido_em'),
+        )
+        return Usuario.objects.filter(pk__in=Subquery(pessoas)).values(
+            associado_id=models.F('pk'),instituicao=models.F('curso__instituicao__nome'),
+        ).annotate(
             nome=Subquery(ultimo.values("nome_associado")[:1]),
             rua=Subquery(ultimo.values("rua_associado")[:1]),
-            embarques=Count("pk"),
-            dias=Count(TruncDate("ocorrido_em", tzinfo=self.fuso), distinct=True),
-            primeira_presenca=Min("ocorrido_em"), ultima_presenca=Max("ocorrido_em"),
+            embarques=Subquery(totais.values('embarques')[:1]),
+            dias=Subquery(totais.values('dias')[:1]),
+            primeira_presenca=Subquery(totais.values('primeira')[:1]),
+            ultima_presenca=Subquery(totais.values('ultima')[:1]),
         ).order_by("-embarques", "nome", "associado_id")
 
     @cached_property

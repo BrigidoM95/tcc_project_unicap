@@ -27,7 +27,7 @@ def main():
 
     # Usa a mesma configuração do Django para respeitar SQLITE_PATH e DB_ENGINE.
     executar('manage.py', 'backup_antes_atualizacao', '--destino', str(RAIZ / 'backups'))
-    executar('manage.py', 'migrate', '--noinput')
+    executar('manage.py', 'migrate', '--noinput', '--settings=config.migracao_legada')
     executar('manage.py', 'check')
     print('\nInstalação concluída. Abra LEIA-ME-PRIMEIRO.md para criar o acesso e iniciar.')
 

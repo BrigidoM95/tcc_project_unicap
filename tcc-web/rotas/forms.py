@@ -99,20 +99,31 @@ class RotaForm(forms.ModelForm):
         if not commit: return super().save(commit=False)
         with transaction.atomic():
             rota=super().save()
-            # Preserva os vínculos históricos; reativa os mesmos pontos quando possível.
+            # Mantém identidade e ordem dos vínculos históricos. Remoções podem
+            # deixar intervalos na numeração, sem regravar/reordenar outros pontos.
             for sentido,campo in [('ida','pontos_ida'),('retorno','pontos_retorno')]:
                 existentes=list(rota.pontos.filter(sentido=sentido).order_by('ordem'))
-                base=max((p.ordem for p in existentes),default=0)+1
-                for i,p in enumerate(existentes):
-                    p.ordem=base+i;p.ativo=False;p.save(update_fields=['ordem','ativo'])
                 selecionados=list(self.cleaned_data[campo])
-                ordem_anterior={x.ponto_id:i for i,x in enumerate(existentes)}
-                selecionados.sort(key=lambda p:ordem_anterior.get(p.pk,len(existentes)+p.pk))
-                for ordem,p in enumerate(selecionados,1):
-                    vinculo=next((x for x in existentes if x.ponto_id==p.pk),None)
-                    if vinculo is None: vinculo=PontoEmbarque(rota=rota,sentido=sentido,ponto=p)
-                    vinculo.nome=p.nome;vinculo.endereco=p.endereco
-                    vinculo.ordem=ordem;vinculo.ativo=True;vinculo.save()
+                por_ponto={}
+                for vinculo in existentes:
+                    por_ponto.setdefault(vinculo.ponto_id,vinculo)
+                escolhidos={por_ponto[p.pk].pk for p in selecionados if p.pk in por_ponto}
+                for vinculo in existentes:
+                    if vinculo.ativo and vinculo.pk not in escolhidos:
+                        vinculo.ativo=False;vinculo.save(update_fields=['ativo'])
+                proxima_ordem=max((p.ordem for p in existentes),default=0)+1
+                for ponto in selecionados:
+                    vinculo=por_ponto.get(ponto.pk)
+                    if vinculo is None:
+                        PontoEmbarque.objects.create(rota=rota,sentido=sentido,ponto=ponto,
+                            nome=ponto.nome,endereco=ponto.endereco,ordem=proxima_ordem)
+                        proxima_ordem+=1
+                        continue
+                    alterados=[]
+                    for campo,valor in [('nome',ponto.nome),('endereco',ponto.endereco),('ativo',True)]:
+                        if getattr(vinculo,campo)!=valor:
+                            setattr(vinculo,campo,valor);alterados.append(campo)
+                    if alterados:vinculo.save(update_fields=alterados)
             return rota
 
 class PontoEmbarqueForm(forms.ModelForm):

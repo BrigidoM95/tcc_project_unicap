@@ -2,7 +2,6 @@ import re
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.db.models import Q
 from .models import Usuario, Instituicao, Curso
@@ -89,7 +88,7 @@ class CadastroUsuarioForm(DadosUsuarioForm):
         self.senha_gerada = gerar_senha_acesso()
         user = User.objects.create_user(username=self.cleaned_data['email'], email=self.cleaned_data['email'],
             first_name=self.cleaned_data['nome'], password=self.senha_gerada)
-        p = self.salvar_perfil(user)
+        self.salvar_perfil(user)
         return user
 
 class EdicaoUsuarioForm(DadosUsuarioForm):

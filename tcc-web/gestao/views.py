@@ -1,14 +1,13 @@
 from decimal import Decimal
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count, Sum
+from django.db.models import Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from relatorios.views import administrador_ativo
-from usuarios.models import Usuario, Instituicao, Curso
-from onibus.models import Onibus
+from usuarios.models import Instituicao, Curso
 from .models import Despesa, LogAuditoria
 from .forms import PontoForm
 from rotas.models import Ponto
@@ -97,7 +96,7 @@ def auditoria(request):
     if busca: qs = qs.filter(Q(modelo__icontains=busca)|Q(descricao__icontains=busca)|Q(usuario__first_name__icontains=busca)|Q(ip__icontains=busca))
     acao=request.GET.get('acao','')
     if acao: qs=qs.filter(acao=acao)
-    return render(request,'gestao/auditoria.html',{'objetos':Paginator(qs,50).get_page(request.GET.get('pagina')),'busca':busca,'acao':acao,'acoes':LogAuditoria.objects.values_list('acao',flat=True).distinct()})
+    return render(request,'gestao/auditoria.html',{'objetos':Paginator(qs,50).get_page(request.GET.get('pagina')),'busca':busca,'acao':acao,'acoes':LogAuditoria.objects.order_by('acao').values_list('acao',flat=True).distinct()})
 
 @administrador_ativo
 def despesas_pdf(request):

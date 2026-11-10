@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
@@ -46,6 +46,9 @@ def listar_rotas(request):
         from gestao.indicadores import rotas_pendentes
         rotas=rotas.filter(pk__in=rotas_pendentes().values('pk'))
     pagina = Paginator(rotas.order_by('nome','pk'),25).get_page(request.GET.get('pagina'))
+    totais=Rota.objects.aggregate(total=Count('pk'),
+        total_ativas=Count('pk',filter=Q(status=Rota.Status.ATIVA)),
+        total_inativas=Count('pk',filter=Q(status=Rota.Status.INATIVA)))
     parametros=request.GET.copy();parametros.pop('pagina',None)
     return render(
         request,
@@ -55,13 +58,7 @@ def listar_rotas(request):
             "objetos": pagina, "parametros": parametros.urlencode(),
             "busca": busca,
             "filtro_status": filtro_status,
-            "total": Rota.objects.count(),
-            "total_ativas": Rota.objects.filter(
-                status=Rota.Status.ATIVA
-            ).count(),
-            "total_inativas": Rota.objects.filter(
-                status=Rota.Status.INATIVA
-            ).count(),
+            **totais,
         },
     )
 

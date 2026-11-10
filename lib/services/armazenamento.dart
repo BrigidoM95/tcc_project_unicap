@@ -5,7 +5,9 @@ class Armazenamento {
   static bool emMemoria = false;
   static const _seguro = FlutterSecureStorage();
   static final Map<String, String> _memoria = {};
+  static final Map<String, Future<void>> _escritas = {};
   static Future<dynamic> ler(String chave) async {
+    await _escritas[chave]?.catchError((_) {});
     final valor = emMemoria
         ? _memoria[chave]
         : await _seguro.read(key: 'unicap.v3.$chave');
@@ -23,7 +25,16 @@ class Armazenamento {
       _memoria[chave] = texto;
       return;
     }
-    await _seguro.write(key: 'unicap.v3.$chave', value: texto);
+    final anterior = _escritas[chave] ?? Future<void>.value();
+    final escrita = anterior
+        .catchError((_) {})
+        .then((_) => _seguro.write(key: 'unicap.v3.$chave', value: texto));
+    _escritas[chave] = escrita;
+    try {
+      await escrita;
+    } finally {
+      if (identical(_escritas[chave], escrita)) _escritas.remove(chave);
+    }
   }
 
   static Future<void> apagar(String chave) async {

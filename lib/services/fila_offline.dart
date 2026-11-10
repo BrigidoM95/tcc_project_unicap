@@ -12,6 +12,11 @@ class FilaOffline extends ChangeNotifier {
   Timer? _timer;
   bool _enviando = false;
   int _geracao = 0;
+  final Set<Future<void> Function()> _protegerGps = {};
+  Future<void> protegerGpsEmEnvio() async {
+    await Future.wait(_protegerGps.toList().map((guardar) => guardar()));
+  }
+
   Future<void> iniciar(String token, String dono) async {
     parar();
     _token = token;
@@ -61,36 +66,77 @@ class FilaOffline extends ChangeNotifier {
     await _salvar();
   }
 
-  Future<Map<String, dynamic>> posicao(
+  Future<Map<String, dynamic>> enviarGps(
     int viagem,
-    Map<String, dynamic> posicao,
-  ) async {
-    final caminho = 'api/viagens/$viagem/localizacoes/';
-    final candidatos = itens.where(
-      (e) =>
-          e['tipo'] == 'gps' &&
-          e['caminho'] == caminho &&
-          e['estado'] == 'pendente' &&
-          (e['corpo']['posicoes'] as List).length < 200,
-    );
-    final Map<String, dynamic> item;
-    if (candidatos.isNotEmpty && !_enviando) {
-      item = candidatos.last;
-      (item['corpo']['posicoes'] as List).add(posicao);
-    } else {
-      item = {
-        'id': 'gps:$viagem:${posicao['capturada_em']}',
-        'tipo': 'gps',
-        'caminho': caminho,
-        'corpo': {
-          'posicoes': [posicao],
-        },
-        'estado': 'pendente',
-      };
-      itens.add(item);
+    List<Map<String, dynamic>> posicoes, {
+    bool preservar = false,
+  }) async {
+    if (posicoes.isEmpty || posicoes.length > 200) {
+      throw ArgumentError('O lote deve conter de 1 a 200 posições.');
     }
-    await _salvar();
+    final dono = _dono, token = _token, geracao = _geracao;
+    final item = <String, dynamic>{
+      'id': 'gps:$viagem:${posicoes.first['capturada_em']}',
+      'tipo': 'gps',
+      'caminho': 'api/viagens/$viagem/localizacoes/',
+      'corpo': {'posicoes': List<Map<String, dynamic>>.from(posicoes)},
+      'estado': 'pendente',
+    };
+    var guardado = false;
+    Future<void> guardar() async {
+      guardado = true;
+      if (dono == null) return;
+      if (geracao == _geracao) {
+        if (!itens.contains(item)) itens.add(item);
+        await _salvar();
+      } else {
+        final salvos = List<dynamic>.from(
+          await Armazenamento.ler('fila.$dono') as List? ?? [],
+        );
+        salvos.removeWhere((e) => e['id'] == item['id']);
+        salvos.add(item);
+        await Armazenamento.salvar('fila.$dono', salvos);
+      }
+    }
+
+    _protegerGps.add(guardar);
+    try {
+      if (preservar) await guardar();
+      if (token == null) {
+        throw ApiException('Entre novamente para enviar a localização.');
+      }
+      final resposta = await ApiService.requisicao(
+        item['caminho'] as String,
+        token,
+        corpo: Map<String, dynamic>.from(item['corpo'] as Map),
+      );
+      validarGps(resposta);
+      item['estado'] = 'confirmado';
+      item['resposta'] = resposta;
+      if (guardado && geracao == _geracao) {
+        itens.remove(item);
+        await _salvar();
+      }
+    } catch (e) {
+      item['erro'] = ApiService.mensagemErro(e);
+      if (e is ApiException) item['status'] = e.status;
+      if (!ApiService.falhaTemporaria(e)) item['estado'] = 'recusado';
+      await guardar();
+    } finally {
+      _protegerGps.remove(guardar);
+    }
     return item;
+  }
+
+  static void validarGps(Map<String, dynamic> resposta) {
+    if ((resposta['descartadas'] as num? ?? 0) > 0 &&
+        (resposta['aceitas'] as num? ?? 0) == 0 &&
+        (resposta['repetidas'] as num? ?? 0) == 0) {
+      final motivos = (resposta['motivos'] as List? ?? []).join(' ');
+      throw ApiException(
+        motivos.isEmpty ? 'O servidor recusou a posição do GPS.' : motivos,
+      );
+    }
   }
 
   Future<void> sincronizar() async {
@@ -109,17 +155,7 @@ class FilaOffline extends ChangeNotifier {
             corpo: Map<String, dynamic>.from(item['corpo'] as Map),
           );
           if (geracao != _geracao) return;
-          if (item['tipo'] == 'gps' &&
-              (resposta['descartadas'] as num? ?? 0) > 0 &&
-              (resposta['aceitas'] as num? ?? 0) == 0 &&
-              (resposta['repetidas'] as num? ?? 0) == 0) {
-            final motivos = (resposta['motivos'] as List? ?? []).join(' ');
-            throw ApiException(
-              motivos.isEmpty
-                  ? 'O servidor recusou a posição do GPS.'
-                  : motivos,
-            );
-          }
+          if (item['tipo'] == 'gps') validarGps(resposta);
           item['estado'] = 'confirmado';
           item['resposta'] = resposta;
           if (item['tipo'] == 'gps') itens.remove(item);

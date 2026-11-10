@@ -1,10 +1,9 @@
-from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 from django.apps import apps
 from embarques.tests import Cenario
 from embarques.models import CheckIn
-from rotas.models import Rota, Viagem, PontoEmbarque
+from rotas.models import Rota, Viagem
 from rotas.operacao import data_operacional
 from usuarios.models import Usuario, Instituicao, Curso
 from .models import LogAuditoria

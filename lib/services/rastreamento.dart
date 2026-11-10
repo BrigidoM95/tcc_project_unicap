@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'api_service.dart';
 import 'fila_offline.dart';
 
-class Rastreamento extends ChangeNotifier {
+class Rastreamento extends ChangeNotifier with WidgetsBindingObserver {
   static final instancia = Rastreamento();
   Timer? _timer;
   StreamSubscription<Position>? _fluxo;
@@ -12,6 +13,10 @@ class Rastreamento extends ChangeNotifier {
   DateTime? _ultimaCaptura;
   int? _intervaloFluxo;
   Map<String, dynamic>? _viagem;
+  final List<Map<String, dynamic>> _lote = [];
+  Timer? _timerLote;
+  Position? _ultimaEnfileirada;
+  bool _observando = false;
 
   int _geracao = 0;
   bool _capturando = false;
@@ -75,8 +80,12 @@ class Rastreamento extends ChangeNotifier {
       return;
     }
     final nova = _viagem?['id'] != v['id'];
-    if (nova) parar();
+    if (nova) unawaited(parar());
     _viagem = v;
+    if (!_observando) {
+      WidgetsBinding.instance.addObserver(this);
+      _observando = true;
+    }
 
     intervalo = v['etapa'] == 'no_destino' ? 60 : 10;
     if (nova) {
@@ -86,7 +95,9 @@ class Rastreamento extends ChangeNotifier {
     }
   }
 
-  void parar() {
+  Future<void> parar() async {
+    final envio = enviarLote(preservar: true);
+    final pendentes = FilaOffline.instancia.protegerGpsEmEnvio();
     _geracao++;
     _timer?.cancel();
     _viagem = null;
@@ -94,11 +105,58 @@ class Rastreamento extends ChangeNotifier {
     _fluxo = null;
     _ultimaPosicao = null;
     _ultimaCaptura = null;
+    _ultimaEnfileirada = null;
     _intervaloFluxo = null;
     erro = null;
     ultimoEnvio = null;
     velocidade = 0;
+    if (_observando) {
+      WidgetsBinding.instance.removeObserver(this);
+      _observando = false;
+    }
     notifyListeners();
+    await envio;
+    await pendentes;
+  }
+
+  Future<void> enviarLote({bool preservar = false}) async {
+    _timerLote?.cancel();
+    _timerLote = null;
+    if (_lote.isEmpty || _viagem == null) return;
+    final viagem = _viagem!['id'] as int, geracao = _geracao;
+    final posicoes = List<Map<String, dynamic>>.from(_lote);
+    _lote.clear();
+    final envio = await FilaOffline.instancia.enviarGps(
+      viagem,
+      posicoes,
+      preservar: preservar,
+    );
+    if (geracao != _geracao) return;
+    if (envio['estado'] == 'recusado') {
+      if ([403, 404].contains(envio['status'])) await parar();
+      erro = 'Posição não recebida: ${envio['erro']}';
+    } else if (envio['estado'] == 'pendente') {
+      erro = 'Posições aguardando envio • guardadas no aparelho.';
+    } else {
+      final resposta = envio['resposta'] as Map?;
+      erro = (resposta?['descartadas'] as num? ?? 0) > 0
+          ? 'Algumas posições foram recusadas: ${(resposta?['motivos'] as List? ?? []).join(' ')}'
+          : null;
+      ultimoEnvio = DateTime.now();
+    }
+    notifyListeners();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      // A gravação antecede a rede para sobreviver à suspensão do processo.
+      unawaited(enviarLote(preservar: true));
+      unawaited(FilaOffline.instancia.protegerGpsEmEnvio());
+    } else if (ativo) {
+      _timer?.cancel();
+      unawaited(_capturar(_geracao));
+    }
   }
 
   Future<void> _capturar(int geracao) async {
@@ -140,6 +198,20 @@ class Rastreamento extends ChangeNotifier {
       if (_ultimaCaptura != null && !p.timestamp.isAfter(_ultimaCaptura!)) {
         throw ApiException('Aguardando uma nova posição do GPS.');
       }
+      _ultimaCaptura = p.timestamp;
+      final anterior = _ultimaEnfileirada;
+      if (anterior != null &&
+          Geolocator.distanceBetween(
+                anterior.latitude,
+                anterior.longitude,
+                p.latitude,
+                p.longitude,
+              ) <
+              15 &&
+          p.timestamp.difference(anterior.timestamp) <
+              const Duration(seconds: 60)) {
+        return;
+      }
       final posicao = <String, dynamic>{
         'latitude': p.latitude.toStringAsFixed(6),
         'longitude': p.longitude.toStringAsFixed(6),
@@ -147,25 +219,15 @@ class Rastreamento extends ChangeNotifier {
         'capturada_em': p.timestamp.toUtc().toIso8601String(),
         'velocidade': velocidade,
       };
-      final envio = await FilaOffline.instancia.posicao(
-        _viagem!['id'] as int,
-        posicao,
-      );
-      _ultimaCaptura = p.timestamp;
-      await FilaOffline.instancia.sincronizar();
-      if (_viagem == null || geracao != _geracao) return;
-      if (envio['estado'] == 'recusado') {
-        throw ApiException('Posição não recebida: ${envio['erro']}');
-      }
-      if (envio['estado'] == 'pendente') {
-        erro = 'Posição aguardando envio • guardada no aparelho.';
+      _ultimaEnfileirada = p;
+      _lote.add(posicao);
+      if (_lote.length >= 3) {
+        await enviarLote();
       } else {
-        final resposta = envio['resposta'] as Map?;
-        final descartadas = resposta?['descartadas'] as num? ?? 0;
-        erro = descartadas > 0
-            ? 'Algumas posições foram recusadas: ${(resposta?['motivos'] as List? ?? []).join(' ')}'
-            : null;
-        ultimoEnvio = DateTime.now();
+        _timerLote ??= Timer(const Duration(seconds: 30), () {
+          _timerLote = null;
+          unawaited(enviarLote());
+        });
       }
     } catch (e) {
       if (geracao == _geracao) {
@@ -201,7 +263,7 @@ class Rastreamento extends ChangeNotifier {
         defaultTargetPlatform == TargetPlatform.android
         ? AndroidSettings(
             accuracy: LocationAccuracy.high,
-            distanceFilter: 0,
+            distanceFilter: 15,
             intervalDuration: Duration(seconds: intervalo),
             foregroundNotificationConfig: const ForegroundNotificationConfig(
               notificationTitle: 'Viagem UNICAP em andamento',
@@ -212,7 +274,7 @@ class Rastreamento extends ChangeNotifier {
           )
         : AppleSettings(
             accuracy: LocationAccuracy.high,
-            distanceFilter: 5,
+            distanceFilter: 15,
             activityType: ActivityType.automotiveNavigation,
             pauseLocationUpdatesAutomatically: false,
             showBackgroundLocationIndicator: true,

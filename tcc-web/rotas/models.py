@@ -391,16 +391,13 @@ class Viagem(models.Model):
             f"{self.get_sentido_display()}"
         )
 
-    @property
-    def em_andamento(self):
-        return self.status == self.Status.EM_ANDAMENTO        
-
-
 class LocalizacaoViagem(models.Model):
     viagem = models.ForeignKey(
         Viagem,
         on_delete=models.CASCADE,
         related_name="localizacoes",
+        # O índice único (viagem, capturada_em) também atende buscas por viagem.
+        db_index=False,
     )
 
     latitude = models.DecimalField(
@@ -440,13 +437,6 @@ class LocalizacaoViagem(models.Model):
         verbose_name = "Localização da viagem"
         verbose_name_plural = "Localizações das viagens"
         ordering = ["capturada_em", "pk"]
-
-        indexes = [
-            models.Index(
-                fields=["viagem", "capturada_em"],
-                name="loc_viagem_captura_idx",
-            ),
-        ]
 
         constraints = [
             models.UniqueConstraint(

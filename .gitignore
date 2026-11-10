@@ -21,3 +21,18 @@ backups/
 dados-migracao.json
 *.pyc
 tmp/
+.ruff_cache/
+
+# Variáveis de ambiente
+.env.*
+!.env.example
+!**/.env.example
+
+# Backups e exportações de banco
+*.sql
+*.dump
+*.backup
+
+# Arquivos temporários Python
+*.pyo
+*.pyd

@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core import signing
 from django.core.paginator import Paginator
 from django.db import IntegrityError, OperationalError, transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -13,7 +13,7 @@ from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
-from embarques.models import CheckIn, ReservaAssento, SessaoEmbarque
+from embarques.models import CheckIn, SessaoEmbarque
 from gestao.auditoria import registrar
 from usuarios.models import Usuario
 from .api import BaseViagemApi
@@ -35,11 +35,12 @@ class OperacaoApi(BaseViagemApi):
 class HojeApi(OperacaoApi):
     def get(self, request):
         p=op.perfil(request.user)
-        op.encerrar_antigas(); op.gerar_viagens()
+        op.atualizar_operacao_se_necessario()
         sentido=request.query_params.get('sentido')
         if sentido: op.validar_sentido(sentido)
-        qs=op.consulta_viagens(p).filter(data_servico=op.data_operacional()).order_by('rota__horario_ida','pk')
-        return Response({'viagens':[op.dados_viagem(v,p,sentido) for v in qs], 'atualizado_em':timezone.now().isoformat()})
+        qs=list(op.consulta_viagens(p).filter(data_servico=op.data_operacional()).order_by('rota__horario_ida','pk'))
+        contexto=op.preparar_dados_viagens(qs,p)
+        return Response({'viagens':[op.dados_viagem(v,p,sentido,trajeto=False,contexto=contexto) for v in qs], 'atualizado_em':timezone.now().isoformat()})
 
 
 class ViagemApi(OperacaoApi):
@@ -93,7 +94,7 @@ class AssentosApi(OperacaoApi):
             if op.escolha_aberta(v,direcao):
                 for r in op.reservas(v,direcao):
                     (minhas if r.associado_id==passageiro.pk else ocupadas).add(r.assento)
-        return Response({'viagem':op.dados_viagem(v,p,sentido),'assentos':[
+        return Response({'viagem':op.dados_viagem(v,p,sentido,trajeto=False),'assentos':[
             {'numero':n,'estado':'ocupada' if n in ocupadas else 'reservada' if n in minhas else 'livre'}
             for n in range(1,v.capacidade_embarque+1)]})
 
@@ -112,14 +113,6 @@ class ReservasApi(OperacaoApi):
         return Response({'reservas':[op.dados_reserva(x) for x in reservas],
             'reserva':op.dados_reserva(r),'minha_escolha':op.minha_escolha(r.viagem,p),
             'viagem':op.dados_viagem(r.viagem,p,r.sentido)},status=201)
-
-
-class CancelarReservaApi(OperacaoApi):
-    def delete(self,request,reserva_id):
-        p=op.perfil(request.user)
-        r=get_object_or_404(ReservaAssento,pk=reserva_id,associado=p)
-        op.cancelar_escolha(r.viagem_id,p,r.pk)
-        return Response({'detail':'Reserva liberada.'})
 
 
 class CancelarEscolhaApi(OperacaoApi):
@@ -184,7 +177,7 @@ class EmbarquesApi(OperacaoApi):
     def get(self,request,viagem_id):
         p=op.perfil(request.user);v=op.viagem_visivel(p,viagem_id);op.exigir_fiscal(v,p)
         sentido=op.validar_sentido(request.query_params.get('sentido',v.sentido_atual))
-        return Response({'viagem':op.dados_viagem(v,p,sentido),'checkins':[op.dados_registro(c) for c in v.checkins.filter(sentido=sentido).select_related('viagem__rota','viagem__onibus')]})
+        return Response({'viagem':op.dados_viagem(v,p,sentido,trajeto=False),'checkins':[op.dados_registro(c) for c in v.checkins.filter(sentido=sentido).select_related('viagem__rota','viagem__onibus')]})
 
 
 class BuscarAssociadosApi(OperacaoApi):
@@ -193,11 +186,13 @@ class BuscarAssociadosApi(OperacaoApi):
         q=request.query_params.get('q','').strip()
         sentido=op.validar_sentido(request.query_params.get('sentido',v.sentido_atual))
         if len(q)<3: return Response({'associados':[]})
-        pessoas=Usuario.objects.filter(Q(user__first_name__icontains=q)|Q(rua__icontains=q),user__is_active=True,
-            tipo__in=['associado','fiscal'],curso__instituicao__in=v.rota.instituicoes.all()).select_related('user','curso__instituicao')[:40]
+        pessoas=list(Usuario.objects.filter(Q(user__first_name__icontains=q)|Q(rua__icontains=q),user__is_active=True,
+            tipo__in=['associado','fiscal'],curso__instituicao__in=v.rota.instituicoes.all()).select_related('user','curso__instituicao')[:40])
+        embarques={c.associado_id:c for c in CheckIn.objects.filter(associado_id__in=[a.pk for a in pessoas],
+            data_servico=v.data_servico,sentido=sentido,cancelado_em__isnull=True).select_related('viagem__rota','viagem__onibus')}
         resultado=[]
         for a in pessoas:
-            c=op.duplicado(a,v,sentido)
+            c=embarques.get(a.pk)
             resultado.append({'id':a.pk,'nome':str(a),'rua':a.rua,'curso':a.curso.nome,'instituicao':a.curso.instituicao.nome,
                 'embarque':op.dados_registro(c) if c else None})
         return Response({'associados':resultado})
@@ -244,11 +239,12 @@ class HistoricoApi(OperacaoApi):
         except ValueError: raise op.Regra('Mês inválido.')
         qs=CheckIn.objects.filter(associado=p,data_servico__year=mes.year,data_servico__month=mes.month).select_related('viagem__rota','viagem__onibus')
         validos=qs.filter(cancelado_em__isnull=True)
-        dias=validos.values('data_servico').distinct().count()
+        resumo=validos.aggregate(dias=Count('data_servico',distinct=True),
+            idas=Count('pk',filter=Q(sentido='ida')),voltas=Count('pk',filter=Q(sentido='retorno')))
         dias_viagem=Viagem.objects.filter(data_servico__year=mes.year,data_servico__month=mes.month,data_servico__lte=timezone.localdate(),rota__instituicoes=p.curso.instituicao).exclude(status='cancelada').values('data_servico').distinct().count()
         pagina=Paginator(qs,50).get_page(request.query_params.get('pagina',1))
-        return Response({'checkins':[op.dados_registro(c) for c in pagina],'total':qs.count(),'proxima':pagina.next_page_number() if pagina.has_next() else None,
-            'frequencia':{'dias':dias,'idas':validos.filter(sentido='ida').count(),'voltas':validos.filter(sentido='retorno').count(),'dias_com_viagem':dias_viagem},'mes':mes.strftime('%Y-%m')})
+        return Response({'checkins':[op.dados_registro(c) for c in pagina],'total':pagina.paginator.count,'proxima':pagina.next_page_number() if pagina.has_next() else None,
+            'frequencia':{**resumo,'dias_com_viagem':dias_viagem},'mes':mes.strftime('%Y-%m')})
 
 
 class PosicaoEntrada(serializers.Serializer):
@@ -269,6 +265,7 @@ class LocalizacoesApi(OperacaoApi):
         val=PosicaoEntrada(data=entradas,many=True);val.is_valid(raise_exception=True)
         aceitas=descartadas=repetidas=0
         motivos=[]
+        aprovadas={}
         for x in val.validated_data:
             motivo=None
             if v.etapa in ('agendada','cancelada'):
@@ -283,9 +280,17 @@ class LocalizacoesApi(OperacaoApi):
                 descartadas+=1
                 if motivo not in motivos: motivos.append(motivo)
                 continue
-            _,novo=LocalizacaoViagem.objects.get_or_create(viagem=v,capturada_em=x.pop('capturada_em'),defaults=x)
-            aceitas+=int(novo)
-            repetidas+=int(not novo)
+            instante=x['capturada_em']
+            if instante in aprovadas:
+                repetidas+=1
+            else:
+                aprovadas[instante]=x
+        if aprovadas:
+            existentes=set(v.localizacoes.filter(capturada_em__in=aprovadas).values_list('capturada_em',flat=True))
+            novas=[LocalizacaoViagem(viagem=v,**x) for instante,x in aprovadas.items() if instante not in existentes]
+            LocalizacaoViagem.objects.bulk_create(novas,batch_size=200)
+            aceitas=len(novas)
+            repetidas+=len(existentes)
         return Response({'aceitas':aceitas,'descartadas':descartadas,'repetidas':repetidas,
                          'motivos':motivos,'recebida_em':timezone.now().isoformat()})
 

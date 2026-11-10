@@ -3,6 +3,7 @@
 Transições da viagem registram a coordenada operacional exigida na especificação.
 """
 from contextvars import ContextVar
+from hashlib import sha256
 from django.core.cache import cache
 from rest_framework.exceptions import AuthenticationFailed
 from django.apps import apps
@@ -17,7 +18,7 @@ MODELOS = {'auth.user','usuarios.usuario','usuarios.instituicao','usuarios.curso
  'onibus.onibus','rotas.rota','rotas.pontoembarque','rotas.viagem','embarques.sessaoembarque',
  'embarques.checkin','gestao.despesa','rotas.ponto'}
 
-CAMPOS=('first_name','last_name','email','nome','is_active','is_staff','is_superuser','tipo','status','etapa','ano','ativa','ativo','cancelada','valor','categoria','onibus_id','associado_id','viagem_id','motorista_id','fiscal_id','curso_id','capacidade')
+CAMPOS=('first_name','last_name','email','nome','is_active','is_staff','is_superuser','tipo','status','etapa','ano','ativa','ativo','cancelada','valor','categoria','onibus_id','associado_id','viagem_id','motorista_id','fiscal_id','curso_id','capacidade','ordem','endereco','sentido','ponto_id')
 
 def retrato(instance):
     dados={}
@@ -60,7 +61,10 @@ class AuditoriaMiddleware:
         try:
             response = self.get_response(request)
             if response.status_code == 403:
-                registrar('acesso_negado',detalhes={'caminho':request.path})
+                usuario_id=request.user.pk if request.user.is_authenticated else 'anonimo'
+                chave='auditoria:403:'+sha256(f'{usuario_id}:{request.path}'.encode()).hexdigest()
+                if cache.add(chave,True,timeout=600):
+                    registrar('acesso_negado',detalhes={'caminho':request.path})
             if request.user.is_authenticated:
                 response['Cache-Control'] = 'private, no-store'
                 # Consultas administrativas; polling de API não gera milhares de logs.

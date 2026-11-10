@@ -15,3 +15,18 @@ deploy/backups
 backups
 dados-migracao.json
 tmp
+.ruff_cache
+
+# Arquivos de ambiente privados
+**/.env.*
+!**/.env.example
+
+# Backups e exportações de banco
+**/*.sql
+**/*.dump
+**/*.backup
+
+# Arquivos locais
+**/.git
+**/.github
+**/.vscode

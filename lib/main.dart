@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import './login.dart';
 import 'ui/tema.dart';
+import 'services/consulta_visivel.dart';
 
 void main() {
   runApp(const Main());
@@ -14,6 +15,7 @@ class Main extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: temaUnibus(),
+      navigatorObservers: [observadorConsultas],
       home: const Login(),
       builder: (context, child) => ColoredBox(
         color: const Color(0xFFE4EAF2),

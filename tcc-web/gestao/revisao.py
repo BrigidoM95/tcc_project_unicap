@@ -6,15 +6,13 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
 from relatorios.views import administrador_ativo
 from usuarios.models import Usuario
 from onibus.models import Onibus
-from rotas.models import Rota, Viagem, Ponto
+from rotas.models import Rota, Viagem
 from rotas import operacao
 from .auditoria import registrar
 
@@ -25,6 +23,7 @@ def detalhe_usuario(request, pk):
     campos={'Nome':str(p),'RUA':p.rua,'E-mail':p.user.email,'Telefone':p.telefone,'Tipo':p.get_tipo_display(),
         'Situação':'Ativo' if p.user.is_active else 'Inativo','Instituição / curso':str(p.curso or 'Não informado'),
         'Administrador':'Sim' if p.tipo=='administrador' or p.user.is_superuser else 'Não'}
+    campos['Última redefinição de senha']=timezone.localtime(p.senha_definida_em).strftime('%d/%m/%Y %H:%M') if p.senha_definida_em else 'Não registrada'
     return render(request,'gestao/detalhe.html',{'titulo':'Detalhes do usuário','campos':campos,
         'editar':reverse('editar_usuario',args=[pk]),'usuario':p,'embarques':Paginator(p.checkins.select_related('viagem__rota'),25).get_page(request.GET.get('pagina')),'voltar':reverse('listar_usuarios')})
 

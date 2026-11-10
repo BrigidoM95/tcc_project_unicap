@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../login.dart';
 import '../services/api_service.dart';
+import '../services/consulta_visivel.dart';
 import '../services/fila_offline.dart';
 import '../services/rastreamento.dart';
 import '../ui/componentes.dart';
@@ -19,21 +19,33 @@ class ViagensHoje extends StatefulWidget {
   State<ViagensHoje> createState() => _ViagensHojeState();
 }
 
-class _ViagensHojeState extends State<ViagensHoje> {
+class _ViagensHojeState extends EstadoComConsulta<ViagensHoje> {
+  @override
+  Duration get intervaloConsulta => const Duration(seconds: 10);
+  @override
+  Future<void> consultar() => carregar();
+  @override
+  bool get consultaHabilitada => aba == 0;
+  void mudarAba(int indice) {
+    setState(() => aba = indice);
+    if (indice == 0) {
+      retomarConsulta();
+    } else {
+      pausarConsulta();
+    }
+  }
+
   List<Dados> viagens = [];
   String? erro;
   bool carregando = true, buscando = false;
   int sentido = 0, aba = 0;
-  Timer? timer;
   String get perfil => '${widget.usuario['tipo']}';
   String get caminho =>
       'api/viagens/hoje/${perfil == 'associado' ? '?sentido=${sentido == 0 ? 'ida' : 'retorno'}' : ''}';
   @override
   void initState() {
     super.initState();
-    carregar();
     FilaOffline.instancia.addListener(mudouFila);
-    timer = Timer.periodic(const Duration(seconds: 2), (_) => carregar());
   }
 
   void mudouFila() {
@@ -42,13 +54,12 @@ class _ViagensHojeState extends State<ViagensHoje> {
 
   @override
   void dispose() {
-    timer?.cancel();
     FilaOffline.instancia.removeListener(mudouFila);
     super.dispose();
   }
 
   Future<void> carregar() async {
-    if (buscando) return;
+    if (buscando || !consultaAtiva) return;
     buscando = true;
     final consulta = caminho;
     try {
@@ -78,6 +89,7 @@ class _ViagensHojeState extends State<ViagensHoje> {
         erro = null;
       });
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
       buscando = false;
@@ -111,8 +123,8 @@ class _ViagensHojeState extends State<ViagensHoje> {
       );
       return;
     }
+    await Rastreamento.instancia.parar();
     FilaOffline.instancia.parar();
-    Rastreamento.instancia.parar();
     await ApiService.sair();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
@@ -151,6 +163,7 @@ class _ViagensHojeState extends State<ViagensHoje> {
       );
       await carregar();
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -165,10 +178,7 @@ class _ViagensHojeState extends State<ViagensHoje> {
         perfil == 'associado' ||
         (perfil == 'fiscal' && widget.usuario['estudante'] == true);
     if (aba == 1) {
-      return HistoricoV3(
-        token: widget.token,
-        onViagens: () => setState(() => aba = 0),
-      );
+      return HistoricoV3(token: widget.token, onViagens: () => mudarAba(0));
     }
     return TelaUnicap(
       titulo: perfil == 'motorista'
@@ -198,9 +208,7 @@ class _ViagensHojeState extends State<ViagensHoje> {
           const PopupMenuItem(value: 'sair', child: Text('Sair')),
         ],
       ),
-      rodape: historico
-          ? BarraAbas(indice: 0, onChanged: (i) => setState(() => aba = i))
-          : null,
+      rodape: historico ? BarraAbas(indice: 0, onChanged: mudarAba) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -295,7 +303,10 @@ class _ViagensHojeState extends State<ViagensHoje> {
           children: [
             Row(
               children: [
-                SizedBox(width: 88, child: FotoOnibus(v, altura: 65)),
+                SizedBox(
+                  width: 88,
+                  child: FotoOnibus(v, altura: 65, miniatura: true),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -370,16 +381,6 @@ class _ViagensHojeState extends State<ViagensHoje> {
                 onPressed: () => assumir(v),
               ),
             ] else ...[
-              if (v['proximo_ponto'] != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  '⌖ Próximo ponto: ${v['proximo_ponto']}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
               if (perfil == 'fiscal')
                 Text(
                   'Motorista: ${v['motorista_nome']}',

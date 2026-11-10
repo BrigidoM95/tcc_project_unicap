@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/consulta_visivel.dart';
 import '../../services/fila_offline.dart';
 import '../../services/rastreamento.dart';
 import '../../ui/componentes.dart';
@@ -20,11 +20,14 @@ class ViagemMotorista extends StatefulWidget {
   State<ViagemMotorista> createState() => _ViagemMotoristaState();
 }
 
-class _ViagemMotoristaState extends State<ViagemMotorista> {
+class _ViagemMotoristaState extends EstadoComConsulta<ViagemMotorista> {
+  @override
+  Duration get intervaloConsulta => intervaloDaViagem(v);
+  @override
+  Future<void> consultar() => atualizar();
   late Dados v;
   String? erro, erroPermissao;
   bool ocupado = false, buscando = false, permitido = false;
-  Timer? timer;
   final gps = Rastreamento.instancia;
   static const transicoes = {
     'agendada': ['iniciar_rota', 'embarque_ida', 'iniciada_em'],
@@ -40,8 +43,6 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
     gps.addListener(mudou);
     FilaOffline.instancia.addListener(mudou);
     if (!['encerrada', 'cancelada'].contains(v['etapa'])) verificarPermissao();
-    atualizar();
-    timer = Timer.periodic(const Duration(seconds: 2), (_) => atualizar());
   }
 
   void mudou() {
@@ -50,7 +51,6 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
 
   @override
   void dispose() {
-    timer?.cancel();
     gps.removeListener(mudou);
     FilaOffline.instancia.removeListener(mudou);
     super.dispose();
@@ -68,6 +68,7 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
         });
       }
     } catch (e) {
+      falhaConsulta(e);
       if (mounted) {
         setState(() {
           permitido = false;
@@ -78,7 +79,7 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
   }
 
   Future<void> atualizar() async {
-    if (buscando || ocupado) return;
+    if (buscando || ocupado || !consultaAtiva) return;
     buscando = true;
     try {
       final d = await ApiService.requisicao(
@@ -103,6 +104,7 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
         }
       }
     } catch (e) {
+      falhaConsulta(e);
       if (e is ApiException && [403, 404].contains(e.status)) gps.parar();
       if (mounted) setState(() => erro = ApiService.mensagemErro(e));
     } finally {
@@ -131,6 +133,7 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
       );
       if (mounted) setState(() => v = d);
     } catch (e) {
+      falhaConsulta(e);
       if (ApiService.falhaTemporaria(e)) {
         await FilaOffline.instancia.adicionar(
           'transicao',
@@ -396,8 +399,8 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
             : gps.ultimoEnvio == null
             ? 'Obtendo localização'
             : v['etapa'] == 'no_destino'
-            ? 'GPS econômico • a cada 60 s'
-            : 'GPS ativo • a cada ${gps.intervalo} s',
+            ? 'GPS econômico • captura a cada 60 s'
+            : 'GPS ativo • envio em lotes',
         icone: Icons.gps_fixed,
       ),
       Etiqueta(
@@ -418,11 +421,9 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
               children: [
-                Icon(
-                  p['passou_em'] != null
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  color: p['passou_em'] != null ? azulUnibus : bordaUnicap,
+                const Icon(
+                  Icons.location_on_outlined,
+                  color: azulUnibus,
                   size: 22,
                 ),
                 const SizedBox(width: 10),
@@ -432,7 +433,6 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                Text(hora(p['passou_em'])),
               ],
             ),
           ),
@@ -492,55 +492,6 @@ class _ViagemMotoristaState extends State<ViagemMotorista> {
   ];
   List<Widget> emViagem() => [
     MapaDaViagem(v, altura: 300),
-    const SizedBox(height: 12),
-    Cartao(
-      cor: const Color(0xFFFFF8F2),
-      borda: const Color(0xFFFFD9C2),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on, color: Color(0xFF101828)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Próxima parada',
-                  style: TextStyle(color: cinzaUnicap, fontSize: 10),
-                ),
-                Text(
-                  '${v['proximo_ponto'] ?? 'Aguardando posição'}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Tooltip(
-            message:
-                '${v['previsao_metodo'] ?? 'Previsão disponível com GPS recente e ônibus em movimento.'}',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'Previsão',
-                  style: TextStyle(color: cinzaUnicap, fontSize: 10),
-                ),
-                Text(
-                  hora(v['previsao_chegada']),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
     const SizedBox(height: 12),
     Wrap(
       spacing: 8,
