@@ -18,7 +18,15 @@
 {% for r in rotas_incompletas %}<div class="linha-pendencia"><div><strong>{{ r.nome }}</strong><small>{% if not r.tem_instituicoes %}Sem instituição{% endif %}{% if not r.tem_instituicoes and not r.tem_pontos %} · {% endif %}{% if not r.tem_pontos %}Sem ponto ativo{% endif %}</small></div><a href="{% url 'editar_rota' r.pk %}">Completar</a></div>{% empty %}<p>Nenhuma pendência.</p>{% endfor %}
 {% if total_rotas_incompletas %}<a href="{% url 'listar_rotas' %}?pendencia=incompleta">Ver todos ({{ total_rotas_incompletas }})</a>{% endif %}</section>
 </div>
-<section class="cartao acoes-compactas" id="ultimas-acoes"><h2>Últimas ações</h2>
-<nav class="abas-acoes" aria-label="Páginas de ações"><a href="?acoes=1#ultimas-acoes" {% if acoes_pagina == 1 %}aria-current="page"{% endif %}>1–10</a><a href="?acoes=2#ultimas-acoes" {% if acoes_pagina == 2 %}aria-current="page"{% endif %}>11–20</a></nav>
-<div class="table-scroll"><table><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th></tr></thead><tbody>{% for a in ultimas_acoes %}<tr><td>{{ a.criado_em|date:"d/m H:i" }}</td><td>{{ a.usuario.get_full_name|default:"Sistema" }}</td><td>{{ a.descricao|default:a.acao }}</td></tr>{% empty %}<tr><td colspan="3">Nenhuma ação registrada.</td></tr>{% endfor %}</tbody></table></div><a href="{% url 'gestao:auditoria' %}">Ver auditoria completa</a></section>
+<section class="cartao acoes-compactas" id="ultimas-acoes">
+  <header class="auditoria-topo">
+    <div><h2>Últimas ações</h2><p>Histórico recente das operações realizadas no sistema.</p></div>
+    <nav class="abas-acoes" aria-label="Páginas de ações"><a href="?acoes=1#ultimas-acoes" {% if acoes_pagina == 1 %}aria-current="page"{% endif %}>1–10</a><a href="?acoes=2#ultimas-acoes" {% if acoes_pagina == 2 %}aria-current="page"{% endif %}>11–20</a></nav>
+  </header>
+  <div class="table-scroll auditoria-tabela"><table>
+    <thead><tr><th scope="col">Quando</th><th scope="col">Usuário</th><th scope="col">Ação</th></tr></thead>
+    <tbody>{% for a in ultimas_acoes %}<tr><td>{{ a.criado_em|date:"d/m/Y H:i" }}</td><td>{{ a.usuario.get_full_name|default:"Sistema" }}</td><td>{{ a.descricao|default:a.acao }}</td></tr>{% empty %}<tr><td colspan="3">Nenhuma ação registrada.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="auditoria-rodape"><a class="botao secundario" href="{% url 'gestao:auditoria' %}">Ver auditoria completa</a></div>
+</section>
 {% endblock %}

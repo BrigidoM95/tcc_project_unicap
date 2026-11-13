@@ -181,9 +181,10 @@ class CorrecoesPainelTests(Cenario, TestCase):
     def test_menus_ativos_e_pontos_dentro_de_gestao(self):
         resposta=self.client.get('/gestao/')
         self.assertContains(resposta,'Ver pontos de embarque')
-        self.assertContains(resposta,'class="submenu"')
+        self.assertNotContains(resposta,'class="submenu"')
         resposta=self.client.get('/gestao/pontos/')
-        self.assertContains(resposta,'href="/gestao/pontos/" aria-current="page"',html=False)
+        self.assertContains(resposta,'href="/gestao/" aria-current="page"',html=False)
+        self.assertNotContains(resposta,'class="submenu"')
         with patch('gestao.revisao.operacao.gerar_viagens'),patch('gestao.revisao.operacao.encerrar_antigas'):
             resposta=self.client.get('/operacao/')
         self.assertContains(resposta,'href="/operacao/" aria-current="page"',html=False)

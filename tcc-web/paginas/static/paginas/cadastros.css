@@ -91,7 +91,7 @@
 .cadastro-padrao .cadastro-grade > .cadastro-largura-total,
 .cadastro-padrao .cadastro-grade > .grupo:nth-child(n+5) { grid-column: 1 / -1; }
 .cadastro-padrao .cadastro-grade:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
-.cadastro-padrao .cadastro-grade input,
+.cadastro-padrao .cadastro-grade input:not([type="checkbox"]):not([type="radio"]),
 .cadastro-padrao .cadastro-grade select,
 .cadastro-padrao .cadastro-grade textarea { width: 100%; min-width: 0; }
 .cadastro-padrao .cadastro-grade textarea { min-height: 102px; }

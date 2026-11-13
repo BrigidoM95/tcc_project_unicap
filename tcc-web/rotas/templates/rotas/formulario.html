@@ -36,7 +36,7 @@
 
         <div class="cadastro-grade">
         {% for campo in form %}
-            <div class="campo">
+            <div class="campo{% if campo.field.widget.allow_multiple_selected and campo.field.widget.input_type == "checkbox" %} campo-opcoes{% endif %}">
                 <label for="{{ campo.id_for_label }}">
                     {{ campo.label }}{% if campo.field.required %} *{% endif %}
                 </label>

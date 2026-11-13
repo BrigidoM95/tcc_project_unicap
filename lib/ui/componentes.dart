@@ -58,7 +58,8 @@ class EscolhaPonto extends StatelessWidget {
               ),
             )
             .toList(),
-        onChanged: pontos.length == 1 ? null : onChanged,
+        // Mesmo havendo um único ponto, o seletor deve permanecer acessível.
+        onChanged: pontos.isEmpty ? null : onChanged,
       ),
     );
   }

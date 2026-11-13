@@ -78,7 +78,11 @@ def detalhe_rota(request,pk):
         'Instituições':', '.join(r.instituicoes.values_list('nome',flat=True)),
         'Dias de operação':', '.join(['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][i] for i in (r.dias_operacao or range(7))),
         'Situação':r.get_status_display(),'Pontos':', '.join(str(p) for p in r.pontos.all())}
-    return render(request,'gestao/detalhe.html',{'titulo':'Detalhes da rota','campos':campos,
+    return render(request,'rotas/detalhe.html',{'titulo':'Detalhes da rota','campos':campos,
+        'rota':r,
+        'dias_operacao':[['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][i] for i in (r.dias_operacao or range(7))],
+        'pontos_ida':r.pontos.filter(sentido='ida',ativo=True).order_by('ordem','pk'),
+        'pontos_volta':r.pontos.filter(sentido='retorno',ativo=True).order_by('ordem','pk'),
         'editar':reverse('editar_rota',args=[pk]),'voltar':reverse('listar_rotas')})
 
 

@@ -1,0 +1,331 @@
+/* UNICAP | Ajustes específicos do painel — 13/11/2026.
+   Mantém o comportamento dos formulários e dos links. */
+
+/* Menu desktop: Gestão é um único link; sair fica no fim da área lateral. */
+@media (min-width: 801px) {
+  .app-layout > .menu { display: flex; flex-direction: column; }
+  .app-layout > .menu > nav { flex: 1 1 auto; align-content: start; }
+  .app-layout > .menu > .sair { margin-top: auto; padding-top: 18px; }
+}
+@media (max-width: 800px) {
+  .app-layout > .menu { display: block; }
+  .app-layout > .menu > .sair { margin-top: 12px; }
+}
+
+/* Despesas: filtros alinhados pela base dos controles, inclusive botão. */
+.despesas-filtros {
+  display: grid;
+  grid-template-columns: minmax(155px, 170px) minmax(155px, 170px) minmax(220px, 300px) auto;
+  align-items: end;
+  justify-content: start;
+  gap: 12px;
+  margin: 0;
+}
+.despesas-filtros .despesas-filtro-campo { min-width: 0; }
+.despesas-filtros .despesas-filtro-campo label { margin: 0 0 7px; }
+.despesas-filtros .despesas-filtro-campo :is(input, select) { width: 100%; margin: 0; }
+.despesas-filtros .despesas-filtrar { height: 43px; min-height: 43px; align-self: end; margin: 0; }
+@media (max-width: 970px) {
+  .despesas-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .despesas-filtros .despesas-filtrar { width: max-content; }
+}
+@media (max-width: 580px) {
+  .despesas-filtros { grid-template-columns: minmax(0, 1fr); }
+  .despesas-filtros .despesas-filtrar { width: 100%; }
+}
+
+/* Cadastro (pontos, instituições e cursos): um checkbox simples na mesma linha da descrição. */
+.cadastro-padrao .cadastro-grade .cadastro-checkbox-linha {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  margin: 0;
+  cursor: pointer;
+}
+.cadastro-padrao .cadastro-grade .cadastro-checkbox-linha input[type='checkbox'] {
+  appearance: auto;
+  flex: 0 0 18px;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #193d6a;
+}
+.cadastro-padrao .cadastro-grade .cadastro-checkbox-linha span { line-height: 1.4; }
+
+/* Rotas: agrupamentos de checkboxes em linhas legíveis, com o quadrado à esquerda. */
+.cadastro-padrao .cadastro-grade .campo-opcoes > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  background: #fbfcfe;
+}
+.cadastro-padrao .cadastro-grade .campo-opcoes > div > div { min-width: 0; }
+.cadastro-padrao .cadastro-grade .campo-opcoes > div > div > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cadastro-padrao .cadastro-grade .campo-opcoes input[type='checkbox'] {
+  appearance: auto;
+  flex: 0 0 17px;
+  width: 17px;
+  min-width: 17px;
+  max-width: 17px;
+  height: 17px;
+  min-height: 17px;
+  padding: 0;
+  margin: 0;
+  accent-color: #193d6a;
+}
+.cadastro-padrao .cadastro-grade select[multiple] { min-height: 90px; }
+@media (max-width: 600px) {
+  .cadastro-padrao .cadastro-grade .campo-opcoes > div { grid-template-columns: 1fr; }
+}
+
+/* Upload de ônibus: alinhar o controle "Modificar" sem alterar o widget do Django. */
+.cadastro-padrao .onibus-arquivo-centralizado {
+  width: 100%;
+  text-align: center;
+  padding: 12px 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #354d6e;
+  overflow-wrap: anywhere;
+}
+.cadastro-padrao .onibus-arquivo-centralizado input[type='file'] {
+  display: block;
+  width: min(100%, 540px);
+  max-width: 100%;
+  margin: 9px auto 3px;
+  text-align: left;
+}
+.cadastro-padrao .onibus-arquivo-centralizado input[type='checkbox'] {
+  width: 17px; min-width: 17px; height: 17px; min-height: 17px;
+  margin-inline: 5px;
+  vertical-align: middle;
+}
+
+/* Visão geral: histórico de ações mais espaçado, com boa leitura e abas à direita. */
+.acoes-compactas .auditoria-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.acoes-compactas .auditoria-topo h2 { margin: 0 0 3px; }
+.acoes-compactas .auditoria-topo p { margin: 0; color: #68778c; font-size: 13px; }
+.acoes-compactas .abas-acoes { margin: 0; gap: 7px; }
+.acoes-compactas .abas-acoes a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 37px;
+  padding: 7px 13px;
+  color: #2e4b6e;
+  border: 1px solid #dae3ef;
+  border-radius: 9px;
+  background: #f4f7fb;
+  font-size: 12px;
+  text-decoration: none;
+}
+.acoes-compactas .abas-acoes a[aria-current='page'] {
+  background: #17375e;
+  color: #fff;
+  border-color: #17375e;
+}
+.acoes-compactas .auditoria-tabela { border-radius: 11px; }
+.acoes-compactas .auditoria-tabela table { min-width: 590px; }
+.acoes-compactas .auditoria-tabela th { padding: 13px 16px; }
+.acoes-compactas .auditoria-tabela td { padding: 13px 16px; line-height: 1.45; }
+.acoes-compactas .auditoria-tabela td:first-child { width: 155px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.acoes-compactas .auditoria-tabela td:nth-child(2) { width: 28%; font-weight: 600; }
+.acoes-compactas .auditoria-rodape { margin-top: 16px; display: flex; justify-content: flex-end; }
+.acoes-compactas .auditoria-rodape .botao { width: fit-content; }
+
+/* Detalhes de rota, em harmonia com os demais detalhes do painel. */
+.rd-page { width: 100%; min-width: 0; }
+.rd-page .rd-cabecalho { align-items: flex-start; }
+.rd-page .rd-cabecalho .subtitulo { margin: 0; }
+.rd-page .rd-topo-acoes { margin: 0; }
+.rd-page .rd-identificacao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 25px 28px;
+}
+.rd-page .rd-label { display: block; color: #708299; font-size: 11px; font-weight: 700; letter-spacing: .75px; margin-bottom: 7px; }
+.rd-page .rd-identificacao h2 { margin: 0 0 6px; font-size: clamp(20px, 2vw, 25px); }
+.rd-page .rd-identificacao p { margin: 0; color: #5e718a; }
+.rd-page .rd-status { border-radius: 99px; padding: 7px 13px; font-size: 12px; font-weight: 700; }
+.rd-page .rd-status-ativo { color: #1c7046; background: #e7f6ee; }
+.rd-page .rd-status-inativo { color: #9d392e; background: #fff0ed; }
+.rd-page .rd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.rd-page .rd-grid > .cartao { min-width: 0; }
+.rd-page .rd-secao { padding: 25px 28px; }
+.rd-page .rd-secao h2 { font-size: 17px; border-bottom: 1px solid #e6ecf4; padding-bottom: 13px; margin: 0 0 20px; }
+.rd-page .rd-dados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; margin: 0; }
+.rd-page .rd-dados > div { min-width: 0; }
+.rd-page .rd-dados .rd-largura-total { grid-column: 1 / -1; }
+.rd-page .rd-dados dt { color: #6b7c91; font-size: 12px; margin-bottom: 4px; }
+.rd-page .rd-dados dd { color: #1e3654; font-size: 14px; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+.rd-page .rd-etiquetas { display: flex; gap: 8px; flex-wrap: wrap; }
+.rd-page .rd-etiqueta { display: inline-flex; background: #eff4fa; color: #274568; border: 1px solid #dce5f1; border-radius: 8px; padding: 7px 11px; font-weight: 600; font-size: 13px; }
+.rd-page .rd-pontos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rd-page .rd-pontos li { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.rd-page .rd-ponto-ordem { display: grid; place-items: center; flex: 0 0 29px; height: 29px; border-radius: 8px; background: #e9f0f9; color: #1d4d7d; font-size: 12px; font-weight: 800; }
+.rd-page .rd-pontos li > div { min-width: 0; }
+.rd-page .rd-pontos strong { display: block; font-size: 14px; }
+.rd-page .rd-pontos small { display: block; color: #687d95; line-height: 1.4; font-size: 12px; }
+.rd-page .rd-vazio { color: #69798f; font-size: 13px; margin: 0; }
+.rd-page .rd-observacoes { margin: 0; white-space: pre-line; color: #344c6b; }
+@media (max-width: 920px) {
+  .rd-page .rd-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 620px) {
+  .rd-page .rd-secao, .rd-page .rd-identificacao { padding: 18px; }
+  .rd-page .rd-topo-acoes { width: 100%; }
+  .rd-page .rd-topo-acoes .botao { flex: 1 1 auto; }
+}
+
+/* UNICAP - correcao final de despesas, checkbox e upload de fotos. */
+
+/* Despesas: editar e cancelar em uma faixa coerente, sem sobreposicao. */
+.despesas-acoes-registro {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+.despesas-acoes-registro > .despesas-editar {
+  flex: 0 0 auto;
+  min-height: 42px;
+  margin: 0;
+}
+.despesas-acoes-registro > .despesas-cancelar-registro {
+  display: flex;
+  flex: 1 1 410px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+.despesas-cancelar-registro > label {
+  flex: 1 1 190px;
+  display: block;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.despesas-cancelar-registro input {
+  display: block;
+  margin-top: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.despesas-acoes-registro .despesas-cancelar-registro > button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  margin: 0;
+  white-space: nowrap;
+}
+.despesas-status-cancelada { color: #9d392e; font-weight: 700; }
+
+/* Cadastro de pontos: Ativo em linha propria, com espaco e area clicavel. */
+.cadastro-padrao .cadastro-grade > .campo:has(> .cadastro-checkbox-linha) {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  padding: 15px 18px;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.cadastro-padrao .cadastro-grade .cadastro-checkbox-linha {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  width: max-content;
+  max-width: 100%;
+  gap: 16px;
+  min-height: 32px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+.cadastro-padrao .cadastro-grade .cadastro-checkbox-linha input[type='checkbox'] {
+  flex: 0 0 20px;
+  width: 20px;
+  min-width: 20px;
+  max-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: #173b66;
+}
+.cadastro-padrao .cadastro-grade .cadastro-checkbox-linha span {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+  line-height: 1.4;
+  font-weight: 650;
+  color: #233d5c;
+}
+
+/* Editar onibus: "Atualmente" e link alinhados a esquerda;
+   "Modificar" e o seletor de arquivo ficam na mesma linha. */
+.cadastro-padrao .onibus-arquivo-centralizado {
+  display: block;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #354d6e;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.cadastro-padrao .onibus-arquivo-centralizado input[type='file'] {
+  display: inline-block;
+  width: min(480px, 100%);
+  max-width: 100%;
+  margin: 0 0 0 10px;
+  padding: 7px 10px;
+  min-height: 42px;
+  text-align: left;
+  vertical-align: middle;
+  border-radius: 9px;
+  background: #fff;
+}
+@media (max-width: 680px) {
+  .cadastro-padrao .onibus-arquivo-centralizado input[type='file'] {
+    display: block;
+    width: 100%;
+    margin: 7px 0 0;
+  }
+}
+
