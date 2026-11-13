@@ -1,0 +1,316 @@
+/* UNICAP — Camada visual do painel administrativo.
+   Carregada APÓS admin.css. Não altera comportamento ou estrutura de páginas.
+   Revisão inicial: 13/11/2026. */
+:root {
+  --navy: #132f54;
+  --orange: #bc4f1b;
+  --border: #e1e7ef;
+  --muted: #5d6d83;
+  --unicap-surface: #ffffff;
+  --unicap-canvas: #f4f7fb;
+  --unicap-text: #20304a;
+  --unicap-radius: 14px;
+  --unicap-shadow: 0 6px 22px rgba(16, 39, 75, .045);
+}
+
+body {
+  background: var(--unicap-canvas);
+  color: var(--unicap-text);
+  font: 15px/1.55 'Segoe UI', Inter, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: #22558b; }
+a:hover { color: #173d65; }
+
+/* Estrutura e navegação compartilhadas. */
+.app-layout { grid-template-columns: 250px minmax(0, 1fr); }
+.menu {
+  background: linear-gradient(175deg, #173b66 0%, #102b4e 70%, #0b223f 100%);
+  padding: 26px 15px;
+  scrollbar-width: thin;
+  scrollbar-color: #547397 transparent;
+}
+.menu .marca {
+  font-size: 25px;
+  line-height: 1.15;
+  letter-spacing: .5px;
+  padding: 8px 14px 17px;
+  margin-bottom: 21px;
+  border-bottom: 1px solid rgba(255,255,255,.14);
+}
+.menu .marca span { margin-top: 7px; color: #bbd0e8; font-size: 11px; }
+.menu nav { gap: 5px; }
+.menu nav a {
+  border-radius: 10px;
+  padding: 11px 13px;
+  color: #dce9f9;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .16s ease, color .16s ease;
+}
+.menu nav a:hover { background: rgba(255,255,255,.10); color: #fff; }
+.menu nav a[aria-current="page"] {
+  background: rgba(255,255,255,.15);
+  box-shadow: inset 3px 0 #f1a768;
+  color: white;
+}
+.menu .submenu { border-left-color: rgba(255,255,255,.23); }
+.menu .submenu a { font-size: 12px; }
+.menu .sair { margin-top: 25px; }
+.menu .sair button {
+  width: 100%;
+  background: transparent;
+  border-color: rgba(255,255,255,.30);
+  color: #e7f0fc;
+}
+.menu .sair button:hover { background: rgba(255,255,255,.10); }
+.workspace { min-width: 0; }
+.topbar {
+  min-height: 70px;
+  align-items: center;
+  padding: 16px clamp(22px, 2.8vw, 42px);
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+.topbar span:first-child { color: var(--navy); font-weight: 700; }
+.topbar span:last-child { font-weight: 600; }
+.conteudo { max-width: 1560px; padding: clamp(20px, 3vw, 40px); }
+
+/* Hierarquia de títulos, cartões e indicadores. */
+h1 { color: #152f51; font-size: clamp(25px, 2.3vw, 33px); letter-spacing: -.7px; }
+h2 { color: #1c3655; font-size: 19px; line-height: 1.35; }
+.subtitulo { font-size: 14px; }
+.cabecalho { margin-bottom: 24px; }
+.cartao, .card, .modulo, .filtros-container {
+  background: var(--unicap-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--unicap-radius);
+  box-shadow: var(--unicap-shadow);
+  padding: 23px;
+}
+.modulos { gap: 16px; }
+.modulo { gap: 11px; }
+.modulo p { color: var(--muted); }
+.resumos { gap: 14px; }
+.resumos > .resumo {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--unicap-radius);
+  box-shadow: var(--unicap-shadow);
+  padding: 20px 22px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+}
+.resumo strong { color: var(--navy); font-size: clamp(26px, 2vw, 32px); }
+.atalhos-painel { gap: 14px; }
+.atalhos-painel a {
+  background: #fff;
+  border-color: var(--border);
+  border-radius: var(--unicap-radius);
+  box-shadow: var(--unicap-shadow);
+  padding: 21px 18px;
+  min-height: 145px;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.atalhos-painel a:hover {
+  transform: translateY(-2px);
+  border-color: #d6a07a;
+  box-shadow: 0 9px 24px rgba(16,39,75,.09);
+  background: #fff;
+}
+.atalhos-painel svg { stroke: var(--orange); }
+.atalhos-painel strong { color: var(--navy); font-size: 16px; }
+.atalhos-painel small { font-size: 12px; }
+.linha-pendencia { align-items: flex-start; font-size: 13px; }
+.linha-pendencia > div { min-width: 0; overflow-wrap: anywhere; }
+
+/* Controles: preserva tipos, nomes, submissões e handlers existentes. */
+.botao, button, .voltar, .filtro, .botao-editar {
+  border-radius: 9px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  min-height: 42px;
+  padding: 10px 16px;
+  transition: filter .15s ease, box-shadow .15s ease;
+}
+.botao:hover, button:hover { filter: brightness(.96); }
+.botao:active, button:active { filter: brightness(.88); }
+.secundario, .voltar, .botao-editar {
+  background: #eef3f9;
+  border-color: #d7e0ec;
+  color: #294666;
+}
+.perigo, .botao-inativar { background: #fff0ed; color: #a32c25; border-color: #efccc6; }
+.sucesso, .botao-reativar { background: #e7f5ed; color: #17623d; border-color: #b9ddc9; }
+.filtro { background: #edf2f8; border-color: #dbe3ee; color: #455975; }
+.filtro.ativo { background: var(--navy); border-color: var(--navy); color: #fff; }
+label { color: #324760; font-size: 13px; font-weight: 650; }
+input:not([type=checkbox]):not([type=radio]), select, textarea {
+  border-radius: 9px;
+  border: 1px solid #cdd8e6;
+  min-height: 43px;
+  padding: 10px 12px;
+  color: #22354e;
+  background: #fff;
+  font-size: 14px;
+}
+textarea { min-height: 108px; }
+input:not([type=checkbox]):not([type=radio]):focus,
+select:focus, textarea:focus {
+  outline: 2px solid rgba(42,103,177,.28);
+  outline-offset: 1px;
+  border-color: #6c9aca;
+}
+input::placeholder, textarea::placeholder { color: #8290a3; }
+.filtros { gap: 12px; }
+.filtros > label { flex: 1 1 180px; min-width: 0; }
+.filtros > label input, .filtros > label select { display: block; margin-top: 5px; }
+.ajuda { font-size: 12px; }
+
+/* Tabelas: leitura mais confortável sem alterar colunas ou ações. */
+.table-scroll { border-color: var(--border); }
+.table-scroll, .tabela, .tabela-container { max-width: 100%; }
+table { font-size: 13px; }
+th, td { padding: 13px 15px; border-bottom: 1px solid #e9edf3; }
+th { background: #f5f7fb; color: #506581; font-size: 11px; letter-spacing: .4px; }
+tbody tr:hover { background: #fafcff; }
+td a { font-weight: 600; }
+td .acoes { flex-wrap: wrap; }
+td button, td .botao { min-height: 36px; padding: 8px 11px; }
+.ativa, .ativo, .status-ativo { color: #14613d; }
+.inativa, .inativo, .status-inativo { color: #ab352b; }
+
+/* Mensagens e estados do sistema. */
+.mensagem { border: 1px solid #ccdff4; background: #edf5ff; color: #254c79; }
+.mensagem.error { border-color: #f2cbc5; }
+.mensagem.success { border-color: #c1e4ce; }
+.errorlist { padding-left: 18px; }
+.vazio { padding: 24px; }
+:focus-visible { outline: 3px solid #5794d1; outline-offset: 2px; }
+
+@media (min-width: 1260px) {
+  .modulos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1200px) {
+  .atalhos-painel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1000px) {
+  .app-layout { grid-template-columns: 210px minmax(0, 1fr); }
+  .menu { padding-inline: 10px; }
+  .conteudo { padding: 20px; }
+}
+@media (max-width: 800px) {
+  .app-layout { grid-template-columns: minmax(0, 1fr); }
+  .menu { position: static; height: auto; padding: 15px; }
+  .menu .marca { padding: 4px 9px 10px; margin-bottom: 10px; border-bottom: 0; }
+  .menu nav { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .menu nav > a, .menu .grupo-menu > a { white-space: nowrap; }
+  .menu nav > a { flex: 0 0 auto; }
+  .menu .grupo-menu { display: flex; align-items: center; flex: 0 0 auto; gap: 5px; }
+  .menu .submenu { display: block; border: 0; padding: 0; margin: 0; }
+  .menu .submenu a { white-space: nowrap; padding: 11px 13px; }
+  .menu .sair { margin-top: 12px; }
+  .menu .sair button { width: auto; }
+  .topbar { min-height: 56px; padding: 12px 18px; }
+  .conteudo { padding: 18px 14px 28px; }
+  .modulos { grid-template-columns: 1fr; }
+  .resumos { grid-template-columns: 1fr; }
+  .resumo:has(>.cartao) { grid-template-columns: 1fr; }
+  .pendencias-painel { grid-template-columns: 1fr; }
+  .cartao, .card, .modulo, .filtros-container { padding: 18px; }
+}
+@media (max-width: 600px) {
+  .atalhos-painel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .atalhos-painel a { min-height: 125px; padding: 16px 13px; }
+  .atalhos-painel strong { font-size: 14px; }
+  .cabecalho { align-items: stretch; }
+  .acoes-cabecalho { width: 100%; }
+  .filtros > label { flex-basis: 100%; }
+  .topbar span { font-size: 12px; }
+}
+@media (max-width: 380px) {
+  .atalhos-painel { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu nav a, .atalhos-painel a, .botao, button { transition: none; }
+  .atalhos-painel a:hover { transform: none; }
+}
+
+/* UNICAP — Padronização dos links de ação */
+
+:is(
+  .filtros > a:not([class]),
+  .acoes > a:not([class]),
+  .acoes-cabecalho > a:not([class]),
+  .cabecalho > div > a:not([class]),
+  .linha-pendencia > a:not([class]),
+  .conteudo .cartao > a:not([class]),
+  .formulario form > a:not([class]),
+  .conteudo nav:not(.atalhos-painel):not(.abas-acoes) > a:not([class]),
+  .conteudo td:last-child > a:not([class])
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  max-width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #d7e0ec;
+  border-radius: 9px;
+  background: #eef3f9;
+  color: #294666;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background-color .16s ease,
+              border-color .16s ease;
+}
+
+:is(
+  .filtros > a:not([class]),
+  .acoes > a:not([class]),
+  .acoes-cabecalho > a:not([class]),
+  .cabecalho > div > a:not([class]),
+  .linha-pendencia > a:not([class]),
+  .conteudo .cartao > a:not([class]),
+  .formulario form > a:not([class]),
+  .conteudo nav:not(.atalhos-painel):not(.abas-acoes) > a:not([class]),
+  .conteudo td:last-child > a:not([class])
+):hover {
+  background: #e0eaf5;
+  border-color: #adc5df;
+  color: #173d65;
+  text-decoration: none;
+}
+
+/* Preserva as cores dos botões existentes */
+
+a.botao:not(.secundario):not(.perigo):not(.sucesso):hover {
+  color: #fff;
+}
+
+a.botao.secundario:hover,
+a.voltar:hover,
+a.botao-editar:hover {
+  color: #294666;
+}
+
+a.botao.perigo:hover,
+a.botao.inativar:hover {
+  color: #a32c25;
+}
+
+a.botao.sucesso:hover,
+a.botao.reativar:hover {
+  color: #17623d;
+}

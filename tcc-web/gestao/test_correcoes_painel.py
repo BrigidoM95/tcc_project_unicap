@@ -152,12 +152,21 @@ class CorrecoesPainelTests(Cenario, TestCase):
             Viagem.objects.create(rota=self.rota,onibus=self.onibus,motorista=self.motorista,
                 sentido='ida',data_servico=data,status=status,etapa=etapa,iniciada_em=inicio,
                 finalizada_em=inicio if status=='finalizada' else None,encerrada_pelo_sistema=status=='finalizada')
-        resposta=self.client.get('/embarques/')
-        self.assertEqual(resposta.context['ultima_viagem'].pk,self.viagem.pk)
-        self.assertEqual(resposta.context['data_exibida'],antiga)
-        self.assertContains(resposta,'Data dos embarques: '+antiga.strftime('%d/%m/%Y'))
-        resposta=self.client.get('/embarques/',{'data':data_operacional().isoformat()})
-        self.assertEqual(resposta.context['data_exibida'],data_operacional())
+        resposta = self.client.get('/embarques/')
+        self.assertEqual(resposta.context['ultima_viagem'].pk, self.viagem.pk)
+        self.assertEqual(resposta.context['data_exibida'], antiga)
+        self.assertContains(resposta, 'Data em consulta')
+        self.assertContains(
+            resposta,
+            f"<strong>{antiga.strftime('%d/%m/%Y')}</strong>",
+            html=True,
+        )
+
+        resposta = self.client.get(
+            '/embarques/',
+            {'data': data_operacional().isoformat()}
+        )
+        self.assertEqual(resposta.context['data_exibida'], data_operacional())
         self.assertIsNone(resposta.context['ultima_viagem'])
 
     def test_inicio_auditado_conta_mesmo_encerrado_antes_da_partida(self):

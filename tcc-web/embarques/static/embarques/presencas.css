@@ -1,0 +1,241 @@
+/* UNICAP — apresentação exclusiva da Área de Embarque.
+   Os estilos são isolados para não modificar outras telas administrativas. */
+
+.embarque-area {
+  --embarque-azul: #163456;
+  --embarque-borda: #dae3ef;
+  --embarque-suave: #f6f8fc;
+  --embarque-texto: #526581;
+  width: 100%;
+  min-width: 0;
+}
+.embarque-area .cartao {
+  border: 1px solid var(--embarque-borda);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 6px 25px rgba(17, 44, 77, .045);
+}
+.embarque-cabecalho { margin-bottom: 18px; }
+.embarque-cabecalho h1 { margin-bottom: 7px; }
+.embarque-sobretitulo {
+  color: #a14b21;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+}
+.embarque-cabecalho .subtitulo { margin: 0; }
+
+.embarque-contexto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  padding: 16px 21px;
+  margin-bottom: 20px;
+  background: #ebf1f8;
+  border: 1px solid #d6e1ef;
+  border-radius: 13px;
+}
+.embarque-contexto-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+.embarque-contexto-rotulo,
+.embarque-contexto-detalhe > span {
+  color: var(--embarque-texto);
+  font-size: 12px;
+  font-weight: 650;
+}
+.embarque-contexto-principal strong {
+  font-size: 21px;
+  line-height: 1.25;
+  color: var(--embarque-azul);
+  font-variant-numeric: tabular-nums;
+}
+.embarque-contexto-detalhe {
+  min-width: 0;
+  flex: 1 1 300px;
+  border-left: 1px solid #ccd9e8;
+  padding-left: 24px;
+}
+.embarque-contexto-detalhe p { margin: 4px 0 0; font-weight: 600; }
+.embarque-contexto-detalhe small {
+  display: block;
+  color: var(--embarque-texto);
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 3px;
+}
+
+.embarque-filtros { padding: 24px; margin-bottom: 28px; }
+.embarque-secao-titulo h2,
+.embarque-lista-cabecalho h2 {
+  margin: 0 0 5px;
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--embarque-azul);
+}
+.embarque-secao-titulo p,
+.embarque-lista-cabecalho p { margin: 0; font-size: 13px; color: var(--embarque-texto); }
+.embarque-secao-titulo { margin-bottom: 20px; }
+.embarque-grade-filtros {
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(190px, 1fr) minmax(150px, .8fr) minmax(200px, 1.25fr);
+  gap: 15px;
+  align-items: start;
+}
+.embarque-campo { min-width: 0; }
+.embarque-campo label { display: block; margin: 0 0 7px; }
+.embarque-campo input,
+.embarque-campo select { width: 100%; min-width: 0; }
+.embarque-campo .ajuda { margin-top: 5px; }
+.embarque-erros { color: #a62d29; font-size: 12px; margin-top: 5px; }
+.embarque-erros ul { padding-left: 18px; margin: 4px 0; }
+.embarque-acoes {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding-top: 19px;
+  margin-top: 18px;
+  border-top: 1px solid #e9eef5;
+}
+.embarque-acoes button,
+.embarque-acoes .botao {
+  min-height: 42px;
+  padding: 10px 15px;
+  font-size: 13px;
+  text-decoration: none;
+}
+.embarque-lista-cabecalho { margin: 6px 0 14px; }
+.embarque-grupos { display: grid; gap: 20px; }
+.embarque-grupo { min-width: 0; padding: 0 !important; margin: 0 !important; overflow: hidden; scroll-margin-top: 20px; }
+.embarque-grupo-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 23px 24px 20px;
+}
+.embarque-grupo-identificacao { flex: 1 1 300px; min-width: 0; }
+.embarque-grupo-etiqueta {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: #a24b21;
+}
+.embarque-grupo h3 { margin: 0 0 10px; color: var(--embarque-azul); font-size: 23px; line-height: 1.25; }
+.embarque-metadados { display: flex; align-items: center; gap: 8px 13px; flex-wrap: wrap; color: var(--embarque-texto); font-size: 13px; }
+.embarque-placa {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid #d9e2ef;
+  border-radius: 6px;
+  color: #324b68;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .05em;
+  background: var(--embarque-suave);
+}
+.embarque-rota { min-width: 0; overflow-wrap: anywhere; }
+.embarque-contagem {
+  min-width: 160px;
+  padding: 13px 16px;
+  background: #eff4fa;
+  border-radius: 11px;
+  text-align: right;
+}
+.embarque-contagem > span { display: block; font-size: 11px; color: var(--embarque-texto); font-weight: 700; }
+.embarque-contagem strong { display: block; font-size: 25px; line-height: 1.3; color: var(--embarque-azul); font-variant-numeric: tabular-nums; }
+.embarque-contagem strong small { font-size: 14px; font-weight: 600; color: var(--embarque-texto); }
+.embarque-ocupacao-bloco { padding: 0 24px 23px; }
+.embarque-ocupacao-legenda { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: 12px; color: var(--embarque-texto); }
+.embarque-ocupacao-legenda strong { color: #a24b21; font-weight: 800; }
+.embarque-ocupacao-barra { height: 10px; overflow: hidden; border-radius: 50px; background: #e8edf5; }
+.embarque-ocupacao-barra > span { display: block; height: 100%; border-radius: inherit; background: #bd521f; }
+.embarque-registros-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  border-top: 1px solid #e7edf4;
+}
+.embarque-registros-cabecalho h4 { margin: 0; font-size: 15px; color: var(--embarque-azul); }
+.embarque-registros-cabecalho span { font-size: 12px; color: var(--embarque-texto); }
+.embarque-tabela { border: 0; border-radius: 0; margin: 0; box-shadow: none; }
+.embarque-tabela table { min-width: 730px; width: 100%; border-collapse: collapse; }
+.embarque-tabela th { background: var(--embarque-suave); white-space: nowrap; }
+.embarque-tabela td { color: #2c3f58; overflow-wrap: anywhere; }
+.embarque-tabela tbody tr:hover { background: #fbfcfe; }
+.embarque-horario { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.embarque-nome { font-weight: 600; }
+.embarque-poltrona {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 35px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: #edf3f9;
+  color: #244769;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.embarque-tabela-vazia { text-align: center; color: var(--embarque-texto) !important; padding: 28px 15px !important; }
+.embarque-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 24px;
+  color: var(--embarque-texto);
+  font-size: 12px;
+  border-top: 1px solid var(--embarque-borda);
+}
+.embarque-paginacao-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.embarque-paginacao .botao { font-size: 12px; min-height: 37px; padding: 8px 12px; }
+.embarque-sem-viagens { text-align: center; padding: 40px 24px; }
+.embarque-vazio-icone {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  background: #edf3fa;
+  border-radius: 50%;
+  color: #54708f;
+  font-size: 28px;
+  margin: 0 0 12px;
+}
+.embarque-sem-viagens h3 { color: var(--embarque-azul); margin: 0 0 8px; font-size: 19px; }
+.embarque-sem-viagens p { color: var(--embarque-texto); margin: 0 auto 18px; max-width: 470px; }
+
+@media (max-width: 1200px) {
+  .embarque-grade-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 660px) {
+  .embarque-contexto { align-items: stretch; padding: 16px; gap: 12px; }
+  .embarque-contexto-detalhe { border-left: 0; padding-left: 0; border-top: 1px solid #ccd9e8; padding-top: 12px; }
+  .embarque-filtros { padding: 17px; }
+  .embarque-grade-filtros { grid-template-columns: 1fr; gap: 12px; }
+  .embarque-acoes { display: grid; grid-template-columns: 1fr 1fr; }
+  .embarque-acoes button,
+  .embarque-acoes a { width: 100%; min-width: 0; }
+  .embarque-grupo-topo { padding: 19px 16px 14px; }
+  .embarque-contagem { width: 100%; text-align: left; }
+  .embarque-ocupacao-bloco { padding: 0 16px 18px; }
+  .embarque-registros-cabecalho { padding: 14px 16px; }
+  .embarque-paginacao { padding: 14px 16px; }
+}
+@media (max-width: 390px) {
+  .embarque-acoes { grid-template-columns: 1fr; }
+}
