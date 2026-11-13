@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .fotos import foto_publica, miniatura_publica
 from .views import (
     DesativarOnibusApiView,
     OnibusDetalheApiView,
@@ -13,6 +14,8 @@ from .views import (
 
 
 urlpatterns = [
+    path('onibus/<int:onibus_id>/foto/', foto_publica, name='onibus_foto'),
+    path('onibus/<int:onibus_id>/miniatura/', miniatura_publica, name='onibus_miniatura'),
     path(
         "onibus/",
         listar_onibus,

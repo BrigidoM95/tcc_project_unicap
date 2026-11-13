@@ -140,11 +140,19 @@ class Onibus(models.Model):
 
     @property
     def foto_url(self):
-        return self.foto.url if self.foto and self.foto.storage.exists(self.foto.name) else ''
+        # URLs estáveis atendidas pelo Django inclusive com DEBUG=False.
+        # Se o arquivo físico não existe, não anuncia uma imagem quebrada.
+        if self.pk and self.foto and self.foto.storage.exists(self.foto.name):
+            from django.urls import reverse
+            return reverse('onibus_foto', args=[self.pk])
+        return ''
 
     @property
     def miniatura_url(self):
-        return self.miniatura.url if self.miniatura and self.miniatura.storage.exists(self.miniatura.name) else self.foto_url
+        if self.pk and self.miniatura and self.miniatura.storage.exists(self.miniatura.name):
+            from django.urls import reverse
+            return reverse('onibus_miniatura', args=[self.pk])
+        return self.foto_url
 
     def clean(self):
         super().clean()

@@ -66,8 +66,8 @@ def detalhe_onibus(request,pk):
     campos={'Código':o.codigo,'Nome':o.nome,'Placa':o.placa,'Capacidade':o.capacidade,'Motorista':str(o.motorista),
         'Situação':o.get_status_display(),'Observações':o.observacoes}
     if o.foto and not o.foto_url: campos['Foto']='Arquivo anterior indisponível. Reenvie a fotografia em Editar.'
-    return render(request,'gestao/detalhe.html',{'titulo':'Detalhes do ônibus','campos':campos,'foto':o.foto_url,
-        'editar':reverse('editar_onibus',args=[pk]),'voltar':reverse('listar_onibus')})
+    return render(request,'onibus/detalhe.html',{'titulo':'Detalhes do ônibus','campos':campos,'foto':o.foto_url,
+        'onibus':o,'editar':reverse('editar_onibus',args=[pk]),'voltar':reverse('listar_onibus')})
 
 
 @administrador_ativo

@@ -1,0 +1,129 @@
+/* UNICAP — padrão visual das áreas de cadastro.
+   Escopo explícito: não altera os relatórios, detalhes, login ou Despesas. */
+.cadastro-lista,
+.cadastro-padrao {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+.cadastro-lista .cadastro-cabecalho,
+.cadastro-padrao .cadastro-cabecalho {
+  margin-bottom: 30px;
+  align-items: flex-start;
+}
+.cadastro-lista .cadastro-cabecalho h1,
+.cadastro-padrao .cadastro-cabecalho h1 { margin-bottom: 9px; }
+.cadastro-lista .cadastro-cabecalho .subtitulo,
+.cadastro-padrao .cadastro-cabecalho .subtitulo {
+  margin: 0;
+  font-size: 14px;
+  color: #61738a;
+}
+.cadastro-lista .resumos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cadastro-lista .resumos > .resumo { min-height: 106px; }
+.cadastro-lista .filtros-container { margin-bottom: 20px; padding: 20px 22px; }
+.cadastro-lista .filtro-status { margin: 0 0 14px; }
+.cadastro-lista .cadastro-busca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+.cadastro-lista .cadastro-busca input[type='search'] {
+  min-width: 0;
+  flex: 1 1 380px;
+  width: auto;
+  margin: 0;
+}
+.cadastro-lista .cadastro-busca select {
+  flex: 0 1 220px;
+  width: 220px;
+  min-width: 170px;
+  margin: 0;
+}
+.cadastro-lista .cadastro-busca button,
+.cadastro-lista .cadastro-busca .botao {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.cadastro-lista .tabela-container {
+  background: #fff;
+  border: 1px solid #e1e7ef;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.cadastro-lista .tabela-container .table-scroll {
+  border: 0;
+  border-radius: 0;
+  overflow-x: auto;
+}
+.cadastro-lista table { width: 100%; }
+.cadastro-lista .cadastro-acoes-tabela { display: flex; flex-wrap: wrap; gap: 7px; }
+.cadastro-lista .cadastro-acoes-tabela form { margin: 0; }
+.cadastro-lista .cadastro-acoes-tabela .botao,
+.cadastro-lista .cadastro-acoes-tabela button { min-height: 36px; padding: 8px 12px; }
+.cadastro-lista .ativo-status { color: #16663f; font-weight: 650; }
+.cadastro-lista .inativo-status { color: #a2362c; font-weight: 650; }
+.cadastro-padrao .cadastro-formulario {
+  max-width: none;
+  width: 100%;
+  padding: 26px 28px;
+}
+.cadastro-padrao .cadastro-introducao {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e7edf4;
+  margin-bottom: 24px;
+}
+.cadastro-padrao .cadastro-introducao h2 { margin: 0 0 5px; font-size: 19px; }
+.cadastro-padrao .cadastro-introducao p:last-child { margin-bottom: 0; }
+.cadastro-padrao .cadastro-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 17px;
+  align-items: start;
+}
+.cadastro-padrao .cadastro-grade > .campo,
+.cadastro-padrao .cadastro-grade > .grupo { margin: 0; min-width: 0; }
+.cadastro-padrao .cadastro-grade > .campo label,
+.cadastro-padrao .cadastro-grade > .grupo label { display: block; margin-bottom: 7px; }
+.cadastro-padrao .cadastro-grade > .cadastro-largura-total,
+.cadastro-padrao .cadastro-grade > .grupo:nth-child(n+5) { grid-column: 1 / -1; }
+.cadastro-padrao .cadastro-grade:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.cadastro-padrao .cadastro-grade input,
+.cadastro-padrao .cadastro-grade select,
+.cadastro-padrao .cadastro-grade textarea { width: 100%; min-width: 0; }
+.cadastro-padrao .cadastro-grade textarea { min-height: 102px; }
+.cadastro-padrao .cadastro-acoes {
+  margin-top: 27px;
+  padding-top: 20px;
+  border-top: 1px solid #e7edf4;
+  gap: 10px;
+}
+.cadastro-padrao .cadastro-acoes .botao,
+.cadastro-padrao .cadastro-acoes button { min-width: 135px; }
+.cadastro-padrao .foto-atual img {
+  max-width: 230px;
+  max-height: 130px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 10px;
+}
+.cadastro-padrao .errorlist { margin: 7px 0 0; }
+@media (max-width: 1000px) {
+  .cadastro-lista .cadastro-busca { flex-wrap: wrap; }
+  .cadastro-lista .cadastro-busca input[type='search'] { flex: 1 1 100%; }
+  .cadastro-lista .resumos { gap: 12px; }
+}
+@media (max-width: 700px) {
+  .cadastro-lista .resumos { grid-template-columns: 1fr; }
+  .cadastro-lista .cadastro-busca select { flex: 1 1 100%; width: 100%; }
+  .cadastro-padrao .cadastro-grade { grid-template-columns: minmax(0, 1fr); }
+  .cadastro-padrao .cadastro-grade > .cadastro-largura-total,
+  .cadastro-padrao .cadastro-grade > .grupo:nth-child(n+5) { grid-column: auto; }
+  .cadastro-padrao .cadastro-formulario { padding: 18px; }
+  .cadastro-padrao .cadastro-acoes { flex-wrap: wrap; }
+  .cadastro-padrao .cadastro-acoes .botao,
+  .cadastro-padrao .cadastro-acoes button { flex: 1 1 auto; }
+}

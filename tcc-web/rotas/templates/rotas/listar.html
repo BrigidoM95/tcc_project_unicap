@@ -3,20 +3,24 @@
 {% block titulo %}Gerenciar rotas{% endblock %}
 
 {% block conteudo %}
-<div class="cabecalho">
-    <h1>Gerenciar rotas</h1>
+<div class="container cadastro-lista">
+<header class="cabecalho cadastro-cabecalho">
+    <div>
+        <h1>Gerenciamento de Rotas</h1>
+        <p class="subtitulo">Cadastro, edição e controle das rotas e dos itinerários.</p>
+    </div>
     <a class="botao" href="{% url 'cadastrar_rota' %}">Cadastrar rota</a>
-</div>
+</header>
 
-<div class="resumo">
-    <div class="cartao">Total de rotas <strong>{{ total }}</strong></div>
-    <div class="cartao">Ativas <strong>{{ total_ativas }}</strong></div>
-    <div class="cartao">Inativas <strong>{{ total_inativas }}</strong></div>
-</div>
+<section class="resumos">
+    <div class="resumo">Total de rotas<strong>{{ total }}</strong></div>
+    <div class="resumo">Ativas<strong>{{ total_ativas }}</strong></div>
+    <div class="resumo">Inativas<strong>{{ total_inativas }}</strong></div>
+</section>
 
-<div class="cartao">
+<section class="filtros-container">
     {% include 'paginas/filtro_status.html' %}
-    <form method="get" class="filtros">
+    <form method="get" class="busca cadastro-busca">
         <input
             type="search"
             name="q"
@@ -28,15 +32,15 @@
         <input type="hidden" name="status" value="{{ filtro_status }}">
         {% if request.GET.pendencia %}<input type="hidden" name="pendencia" value="{{ request.GET.pendencia }}">{% endif %}
 
-        <button class="botao" type="submit">Filtrar</button>
+        <button class="botao" type="submit">Buscar</button>
         <a class="botao secundario" href="{% url 'listar_rotas' %}">
             Limpar
         </a>
     </form>
-</div>
+</section>
 
-<div class="cartao tabela">
-    <table>
+<section class="tabela-container">
+    <div class="table-scroll"><table>
         <thead>
             <tr>
                 <th>Rota</th>
@@ -118,7 +122,8 @@
                 </tr>
             {% endfor %}
         </tbody>
-    </table>
+    </table></div>
+</section>
 </div>
 {% include 'gestao/paginacao.html' %}
 {% endblock %}

@@ -1,7 +1,67 @@
-{% extends 'paginas/base.html' %}{% block titulo %}{{ titulo }}{% endblock %}{% block conteudo %}
-<header class="cabecalho"><div><h1>{{ titulo }}</h1><a href="{% url 'gestao:painel' %}">Voltar à gestão</a></div><a class="botao" href="{% url 'gestao:novo' tipo %}">Novo registro</a></header>
-
-<form method="get" class="filtros"><label>Buscar <input name="q" value="{{ request.GET.q }}" placeholder="Nome"></label><label>Situação <select name="status"><option value="">Todas</option><option value="ativos" {% if request.GET.status == 'ativos' %}selected{% endif %}>Ativos</option><option value="inativos" {% if request.GET.status == 'inativos' %}selected{% endif %}>Inativos</option></select></label><button>Filtrar</button></form>
-<div class="table-scroll"><table><thead><tr><th>Registro</th><th>Situação</th><th>Informações</th><th>Ação</th></tr></thead><tbody>
-{% for obj in objetos %}<tr><td>{{ obj }}</td><td>{% if tipo == 'cursos' or tipo == 'pontos' %}{{ obj.ativo|yesno:'Ativo,Inativo' }}{% else %}{{ obj.ativa|yesno:'Ativa,Inativa' }}{% endif %}</td><td></td><td><a class="botao secundario" href="{% url 'gestao:editar' tipo obj.pk %}">Editar</a><form method="post" action="{% url 'gestao:status' tipo obj.pk %}" onsubmit="return confirm('Confirmar alteração de situação?')">{% csrf_token %}<button class="secundario">{% if obj.ativo or obj.ativa %}Desativar{% else %}Reativar{% endif %}</button></form></td></tr>{% empty %}<tr><td colspan="4">Nenhum registro cadastrado.</td></tr>{% endfor %}</tbody></table></div>
-{% include 'gestao/paginacao.html' %}{% endblock %}
+{% extends 'paginas/base.html' %}
+{% block titulo %}Gerenciamento de {{ titulo }}{% endblock %}
+{% block conteudo %}
+<div class="container cadastro-lista">
+  <header class="cabecalho cadastro-cabecalho">
+    <div>
+      <h1>Gerenciamento de {{ titulo }}</h1>
+      <p class="subtitulo">Cadastro, consulta e controle dos registros da associação.</p>
+    </div>
+    <div class="acoes-cabecalho">
+      <a class="botao secundario" href="{% url 'gestao:painel' %}">Voltar à gestão</a>
+      <a class="botao" href="{% url 'gestao:novo' tipo %}">Cadastrar {% if tipo == 'instituicoes' %}instituição{% elif tipo == 'cursos' %}curso{% else %}ponto{% endif %}</a>
+    </div>
+  </header>
+  <section class="resumos" aria-label="Resumo de registros">
+    <div class="resumo">Total de registros<strong>{{ total }}</strong></div>
+    <div class="resumo">Ativos<strong>{{ total_ativos }}</strong></div>
+    <div class="resumo">Inativos<strong>{{ total_inativos }}</strong></div>
+  </section>
+  <section class="filtros-container" aria-label="Filtros">
+    {% include 'paginas/filtro_status.html' %}
+    <form method="get" class="busca cadastro-busca">
+      <input type="hidden" name="status" value="{{ filtro_status }}">
+      <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome" aria-label="Buscar registros">
+      <button type="submit" class="botao">Buscar</button>
+      <a href="{% url 'gestao:lista' tipo %}" class="botao secundario">Limpar</a>
+    </form>
+  </section>
+  <section class="tabela-container" aria-label="Registros cadastrados">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Registro</th><th>Situação</th><th>Ações</th></tr></thead>
+        <tbody>
+          {% for obj in objetos %}
+          <tr>
+            <td><strong>{{ obj }}</strong></td>
+            <td>
+              {% if tipo == 'instituicoes' %}
+                {% if obj.ativa %}<span class="ativo-status">Ativa</span>{% else %}<span class="inativo-status">Inativa</span>{% endif %}
+              {% else %}
+                {% if obj.ativo %}<span class="ativo-status">Ativo</span>{% else %}<span class="inativo-status">Inativo</span>{% endif %}
+              {% endif %}
+            </td>
+            <td>
+              <div class="acoes cadastro-acoes-tabela">
+                <a class="botao secundario" href="{% url 'gestao:editar' tipo obj.pk %}">Editar</a>
+                <form method="post" action="{% url 'gestao:status' tipo obj.pk %}" onsubmit="return confirm('Confirmar alteração de situação?')">
+                  {% csrf_token %}
+                  {% if tipo == 'instituicoes' %}
+                    {% if obj.ativa %}<button type="submit" class="botao perigo">Desativar</button>{% else %}<button type="submit" class="botao sucesso">Reativar</button>{% endif %}
+                  {% else %}
+                    {% if obj.ativo %}<button type="submit" class="botao perigo">Desativar</button>{% else %}<button type="submit" class="botao sucesso">Reativar</button>{% endif %}
+                  {% endif %}
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="vazio">Nenhum registro encontrado com esses filtros.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% include 'gestao/paginacao.html' %}
+{% endblock %}

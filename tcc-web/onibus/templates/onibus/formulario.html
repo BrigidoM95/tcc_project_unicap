@@ -3,16 +3,18 @@
 {% block conteudo %}
 
 
-<div class="container">
+<div class="container cadastro-padrao">
 
-    <h1>{{ titulo }}</h1>
+    <header class="cabecalho cadastro-cabecalho">
+        <div>
+            <h1>{{ titulo }}</h1>
+            <p class="subtitulo">Preencha as informações do veículo.</p>
+        </div>
+        <a class="botao secundario" href="{% url 'listar_onibus' %}">Voltar para ônibus</a>
+    </header>
 
-    <p class="subtitulo">
-        Preencha as informações do veículo.
-    </p>
-
-
-    <section class="card formulario">
+    <section class="card formulario cadastro-formulario">
+        <div class="cadastro-introducao"><h2>Dados do veículo</h2></div>
 
 
         {% if modo_edicao %}
@@ -50,7 +52,7 @@
 
             {% csrf_token %}
 
-
+            <div class="cadastro-grade">
             <div class="grupo">
 
                 <label>
@@ -178,7 +180,9 @@
             </div>
 
 
-            <div class="acoes">
+            </div>
+
+            <div class="acoes cadastro-acoes">
 
                 <button
                     type="submit"

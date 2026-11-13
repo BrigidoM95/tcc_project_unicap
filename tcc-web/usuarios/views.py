@@ -84,16 +84,27 @@ def listar_usuarios(request):
         "user__first_name"
     )
 
-    from django.db.models import Q
+    from django.db.models import Count, Q
     from django.core.paginator import Paginator
-    q=request.GET.get('q','').strip(); tipo=request.GET.get('tipo',''); inativos=request.GET.get('status')=='inativos'
-    usuarios=usuarios.filter(user__is_active=not inativos)
+    q=request.GET.get('q','').strip()
+    tipo=request.GET.get('tipo','')
+    filtro_status=request.GET.get('status','ativos')
+    if filtro_status not in ('ativos','inativos','todos'):
+        filtro_status='ativos'
+    inativos=filtro_status=='inativos'
+    totais=Usuario.objects.aggregate(
+        total=Count('pk'),
+        total_ativos=Count('pk',filter=Q(user__is_active=True)),
+        total_inativos=Count('pk',filter=Q(user__is_active=False)),
+    )
+    if filtro_status!='todos':
+        usuarios=usuarios.filter(user__is_active=not inativos)
     if request.GET.get('pendencia')=='sem_curso': usuarios=usuarios.filter(tipo='associado',curso__isnull=True,user__is_active=True)
     if q: usuarios=usuarios.filter(Q(user__first_name__icontains=q)|Q(user__email__icontains=q)|Q(rua__icontains=q))
     if tipo in Usuario.Tipo.values: usuarios=usuarios.filter(tipo=tipo)
     pagina=Paginator(usuarios,25).get_page(request.GET.get('pagina'))
     parametros=request.GET.copy();parametros.pop('pagina',None)
-    return render(request, 'usuarios/listar.html', {'usuarios':pagina,'pagina':pagina,'busca':q,'tipo':tipo,'inativos':inativos,'tipos':Usuario.Tipo.choices,'parametros':parametros.urlencode()})
+    return render(request, 'usuarios/listar.html', {'usuarios':pagina,'pagina':pagina,'busca':q,'tipo':tipo,'inativos':inativos,'tipos':Usuario.Tipo.choices,'parametros':parametros.urlencode(),'filtro_status':filtro_status,**totais})
 
 @user_passes_test(eh_administrador, login_url="login")
 def cadastrar_usuario(request):

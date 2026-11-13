@@ -1,0 +1,67 @@
+{% extends 'paginas/base.html' %}
+{% load static %}
+{% block titulo %}Detalhes do ônibus{% endblock %}
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'onibus/detalhe_onibus.css' %}">
+{% endblock %}
+{% block conteudo %}
+<div class="onibus-detalhe">
+  <header class="cabecalho onibus-detalhe__cabecalho">
+    <div>
+      <h1>Detalhes do ônibus</h1>
+      <p class="subtitulo">Informações e identificação do veículo cadastrado.</p>
+    </div>
+    <a class="botao secundario" href="{{ voltar }}">Voltar para ônibus</a>
+  </header>
+
+  <section class="cartao onibus-detalhe__resumo" aria-label="Resumo do ônibus">
+    <div class="onibus-detalhe__identificacao">
+      <span class="onibus-detalhe__rotulo">VEÍCULO CADASTRADO</span>
+      <h2>{{ onibus.nome }}</h2>
+      <p><span>Código</span> <strong>{{ onibus.codigo }}</strong> <span class="onibus-detalhe__separador">•</span> <span>Placa</span> <strong>{{ onibus.placa }}</strong></p>
+    </div>
+    <span class="onibus-detalhe__situacao {% if onibus.ativo %}onibus-detalhe__situacao--ativo{% else %}onibus-detalhe__situacao--inativo{% endif %}">
+      {{ onibus.get_status_display }}
+    </span>
+  </section>
+
+  <div class="onibus-detalhe__colunas">
+    <section class="cartao onibus-detalhe__foto" aria-labelledby="onibus-foto-titulo">
+      <h2 id="onibus-foto-titulo">Fotografia do veículo</h2>
+      {% if foto %}
+        <div class="onibus-detalhe__imagem">
+          <img src="{{ foto }}" alt="Fotografia cadastrada do ônibus {{ onibus.nome }}" loading="lazy">
+        </div>
+      {% else %}
+        <div class="onibus-detalhe__foto-vazia" role="status">
+          <span aria-hidden="true">Imagem indisponível</span>
+          {% if onibus.foto %}
+            <p>A fotografia está registrada no cadastro, mas o arquivo não foi encontrado. Confira o armazenamento e reenvie a foto original em Editar.</p>
+          {% else %}
+            <p>Nenhuma fotografia cadastrada para este ônibus.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+      <p class="onibus-detalhe__ajuda">Formatos aceitos no cadastro: JPG, PNG ou WEBP, até 5 MB.</p>
+    </section>
+
+    <section class="cartao onibus-detalhe__informacoes" aria-labelledby="onibus-dados-titulo">
+      <h2 id="onibus-dados-titulo">Informações do ônibus</h2>
+      <dl class="onibus-detalhe__grade">
+        <div><dt>Nome / identificação</dt><dd>{{ onibus.nome }}</dd></div>
+        <div><dt>Código</dt><dd>{{ onibus.codigo }}</dd></div>
+        <div><dt>Placa</dt><dd>{{ onibus.placa }}</dd></div>
+        <div><dt>Capacidade</dt><dd>{{ onibus.capacidade }} passageiros</dd></div>
+        <div><dt>Motorista responsável</dt><dd>{{ onibus.motorista }}</dd></div>
+        <div><dt>Situação</dt><dd>{{ onibus.get_status_display }}</dd></div>
+        <div class="onibus-detalhe__observacoes"><dt>Observações</dt><dd>{{ onibus.observacoes|default:'Não informado'|linebreaksbr }}</dd></div>
+      </dl>
+      <div class="acoes onibus-detalhe__acoes">
+        <a class="botao" href="{{ editar }}">Editar ônibus</a>
+        <a class="botao secundario" href="{{ voltar }}">Voltar à listagem</a>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

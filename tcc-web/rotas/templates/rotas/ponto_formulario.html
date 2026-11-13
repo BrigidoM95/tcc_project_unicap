@@ -3,16 +3,18 @@
 {% block titulo %}{{ titulo }}{% endblock %}
 
 {% block conteudo %}
-<div class="cabecalho">
-    <h1>{{ titulo }}</h1>
-    <a class="botao secundario"
-       href="{% url 'listar_pontos' rota.pk %}">
-        Voltar para pontos
-    </a>
-</div>
+<div class="container cadastro-padrao">
+<header class="cabecalho cadastro-cabecalho">
+    <div>
+        <h1>{{ titulo }}</h1>
+        <p class="subtitulo">Cadastro e edição dos pontos vinculados à rota.</p>
+    </div>
+    <a class="botao secundario" href="{% url 'listar_pontos' rota.pk %}">Voltar para pontos</a>
+</header>
 
-<div class="cartao">
-    <p>Rota: <strong>{{ rota.nome }}</strong></p>
+<section class="cartao cadastro-formulario">
+    <div class="cadastro-introducao"><h2>Dados do ponto</h2><p class="ajuda">Rota: {{ rota.nome }}</p></div>
+
 
     <form method="post">
         {% csrf_token %}
@@ -25,6 +27,7 @@
 
         {{ form.non_field_errors }}
 
+        <div class="cadastro-grade">
         {% for campo in form %}
             <div class="campo">
                 <label for="{{ campo.id_for_label }}">
@@ -40,8 +43,9 @@
                 {{ campo.errors }}
             </div>
         {% endfor %}
+        </div>
 
-        <div class="acoes">
+        <div class="acoes cadastro-acoes">
             <button class="botao" type="submit">Salvar ponto</button>
             <a class="botao secundario"
                href="{% url 'listar_pontos' rota.pk %}">
@@ -49,5 +53,6 @@
             </a>
         </div>
     </form>
+</section>
 </div>
 {% endblock %}

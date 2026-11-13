@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Sum
+from django.db.models import Count, Q, Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -28,15 +28,25 @@ def lista(request,tipo):
     qs = model.objects.all()
     if tipo == 'cursos': qs = qs.select_related('instituicao')
     if tipo == 'despesas': return despesas(request)
+    campo='ativa' if tipo == 'instituicoes' else 'ativo'
+    totais=model.objects.aggregate(
+        total=Count('pk'),
+        total_ativos=Count('pk',filter=Q(**{campo:True})),
+        total_inativos=Count('pk',filter=Q(**{campo:False})),
+    )
     q=request.GET.get('q','').strip()
     if q:
         qs=qs.filter(nome__icontains=q)
-    estado=request.GET.get('status','')
+    estado=request.GET.get('status','todos')
+    if estado not in ('ativos','inativos','todos'):
+        estado='todos'
     if estado in ('ativos','inativos'):
-        campo='ativa' if tipo == 'instituicoes' else 'ativo'
         qs=qs.filter(**{campo:estado=='ativos'})
+    parametros=request.GET.copy()
+    parametros.pop('pagina',None)
     return render(request,'gestao/lista.html',{'tipo':tipo,'titulo':titulo,
-        'objetos':Paginator(qs,30).get_page(request.GET.get('pagina'))})
+        'objetos':Paginator(qs,30).get_page(request.GET.get('pagina')),
+        'busca':q,'filtro_status':estado,'parametros':parametros.urlencode(),**totais})
 
 @administrador_ativo
 def editar(request,tipo,pk=None):

@@ -1,7 +1,7 @@
 {% load static %}
 <!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}Painel{% endblock %} | UNICAP</title>
-<link rel="stylesheet" href="{% static 'paginas/admin.css' %}"><link rel="stylesheet" href="{% static 'paginas/refinamento.css' %}">{% block extra_head %}{% endblock %}</head>
+<link rel="stylesheet" href="{% static 'paginas/admin.css' %}"><link rel="stylesheet" href="{% static 'paginas/refinamento.css' %}"><link rel="stylesheet" href="{% static 'paginas/cadastros.css' %}">{% block extra_head %}{% endblock %}</head>
 <body><a class="pular" href="#conteudo">Ir para o conteúdo</a><div class="app-layout">
 <aside class="menu"><a class="marca" href="{% url 'home' %}">UNICAP<span>Transporte universitário</span></a>
 <nav aria-label="Navegação principal">
